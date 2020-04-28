@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1588021740642.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1399426817",
+    "id" : "D1FF8F35",
+    "lastKnownWriteTime" : 1588022101,
+    "last_content_update" : 1588022101715,
+    "path" : "~/deepSNEM/weighted_files.R",
+    "project_path" : "weighted_files.R",
+    "properties" : {
+        "cursorPosition" : "36,0",
+        "scrollLine" : "12",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 10,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1588009632095.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "5FAF8DA7",
+    "lastKnownWriteTime" : 5292976843906638626,
+    "last_content_update" : 1588009632095,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "2FAA9392",
+        "caption" : "cluster",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=cluster&cache_key=2FAA9392",
+        "displayedObservations" : 7722,
+        "environment" : "",
+        "object" : "cluster",
+        "preview" : 0,
+        "totalObservations" : 7722,
+        "variables" : 1
+    },
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}

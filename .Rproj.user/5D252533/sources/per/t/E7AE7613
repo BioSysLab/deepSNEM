@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "179869784",
+    "hash" : "3054006221",
     "id" : "E7AE7613",
-    "lastKnownWriteTime" : 1586444015,
-    "last_content_update" : 1586444015773,
+    "lastKnownWriteTime" : 1588008159,
+    "last_content_update" : 1588008159328,
     "path" : "~/deepSNEM/embedding_eval.R",
     "project_path" : "embedding_eval.R",
     "properties" : {
-        "cursorPosition" : "498,0",
-        "scrollLine" : "468"
+        "cursorPosition" : "232,111",
+        "scrollLine" : "226"
     },
     "relative_order" : 1,
     "source_on_save" : false,

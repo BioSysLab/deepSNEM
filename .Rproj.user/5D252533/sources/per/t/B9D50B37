@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1588004590063.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3184793970",
+    "id" : "B9D50B37",
+    "lastKnownWriteTime" : 1588020928,
+    "last_content_update" : 1588020928383,
+    "path" : "~/deepSNEM/clustering_embeddings.R",
+    "project_path" : "clustering_embeddings.R",
+    "properties" : {
+        "cursorPosition" : "34,0",
+        "scrollLine" : "6",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

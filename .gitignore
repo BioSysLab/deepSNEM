@@ -1,6 +1,7 @@
-/data/cmap/repo_hub/cmap_repo_sims.csv
-/data/cmap/repo_hub/cmap_repo_sims.rar
+/data/cmap/repo_hub
+/data/cmap/util_files
+/data/rdkit
 /validation
 /data/cmap/util_files/GSE92742_Broad_LINCS_sig_info.txt
 /embeddings/graph2vec
-/validation_graph2vec
+/embeddings/autoencoder_graph

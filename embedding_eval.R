@@ -6,6 +6,7 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
   library(tidyverse)
   library(lsa)
   library(Rtsne)
+  library(umap)
   # keep some columns of file_info
   file_info <- file_info %>% dplyr::select(-c(distil_id,distil_cc_q75,distil_nsample,distil_ss,median_drug_ranks,ngenes_modulated_up_lm,
                                        ngenes_modulated_dn_lm,tas,pct_self_rank_q25,is_exemplar,myc_ranks,counts,count.y))
@@ -119,7 +120,7 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
   output_task1$n_random <- nrow(all_random_dists)
   write.csv(output_task1,paste0(output_dir,"/task1/","task1_stats.csv"))
   
-  # Task 1 TSNE
+  # Task 1 TSNE + UMAP
   
   file_info_tsne_1 <- file_info_t1[which(file_info_t1$sig_id %in% sampled_sigs),]
   sampled_sigs <- as.data.frame(sampled_sigs)
@@ -129,13 +130,21 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
   emb_tsne <- test[which(test$emb %in% file_info_labels$emb),]
   emb_tsne <- left_join(emb_tsne,file_info_labels,by=c("emb"="emb"))
   emb_tsne$label <- as.factor(emb_tsne$label)
-  tsne <- Rtsne(emb_tsne[,-c(1,130)], dims = 2, perplexity=50, verbose=TRUE, max_iter = 1000)
+  tsne <- Rtsne(emb_tsne[,-c(1,ncol(emb_tsne))], dims = 2, perplexity = 50, verbose=TRUE, max_iter = 1000)
   df <- data.frame(V1 = tsne$Y[,1], V2 =tsne$Y[,2], label = emb_tsne$label)
   
   png(file=paste0(output_dir,"/task1/","task1_same_sig_id_tsne.png"),width=9,height=9,units = "in",res=300)
   gg1 <- ggplot(df, aes(V1, V2))+
      geom_point(aes(color = label))
   print(gg1)
+  dev.off()
+  
+  map <- umap(emb_tsne[,-c(1,ncol(emb_tsne))])
+  df_map <- data.frame(V1 = map$layout[,1], V2 = map$layout[,2], label = emb_tsne$label)
+  png(file=paste0(output_dir,"/task1/","task1_same_sig_id_umap.png"),width=9,height=9,units = "in",res=300)
+  gg_map <- ggplot(df_map, aes(V1, V2))+
+    geom_point(aes(color = label))
+  print(gg_map)
   dev.off()
   print("TASK 1 FINISHED")
   
@@ -201,14 +210,16 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
   write.csv(output_task2,paste0(output_dir,"/task2/","task2_stats.csv"))
   # Task 2 TSNE
   task2_tsne <- file_info_dups[which(file_info_dups$identifier %in% identifier),]
+  task2_tsne <- task2_tsne[which(as.character(task2_tsne$emb) %in% as.character(test$emb)),]
+  task2_tsne <- task2_tsne %>% group_by(sig_id) %>% sample_n(1) %>% ungroup()
   task2_tsne_labels <- task2_tsne %>% dplyr::select(emb,identifier)
   emb_task2_tsne <- test[which(test$emb %in% task2_tsne$emb),]
   emb_task2_tsne <- left_join(emb_task2_tsne,task2_tsne_labels)
   emb_task2_tsne$identifier <- as.factor(emb_task2_tsne$identifier)
   
-  tsne2 <- Rtsne(emb_task2_tsne[,-c(1,130)], dims = 2, perplexity=50, verbose=TRUE, max_iter = 1000)
+  tsne2 <- Rtsne(emb_task2_tsne[,-c(1,ncol(emb_task2_tsne))], dims = 2, perplexity=5, verbose=TRUE, max_iter = 3000)
   g <- NULL
-  for (i in 1:9) {
+  for (i in 1:25) {
     labels <- emb_task2_tsne$identifier
     labels <- as.data.frame(labels)
     labels$label <- 1
@@ -219,8 +230,26 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
       geom_point(aes(color = label),show.legend = T)
     g[[i]] <- g2
   }
-  png(file=paste0(output_dir,"/task2/","task_duplicate_sig_id_tnse.png"),width=9,height=6,units = "in",res=300)
-  gridExtra::grid.arrange(g[[1]],g[[2]],g[[3]],g[[4]],g[[5]],g[[6]],g[[7]],g[[8]],g[[9]],nrow = 3)
+  png(file=paste0(output_dir,"/task2/","task_duplicate_sig_id_tnse.png"),width=12,height=9,units = "in",res=300)
+  gridExtra::grid.arrange(grobs = g,nrow = 5)
+  dev.off()
+  
+  # UMAP task 2
+  umap2 <- umap(emb_task2_tsne[,-c(1,ncol(emb_task2_tsne))])
+  gmap <- NULL
+  for (i in 1:25) {
+    labels <- emb_task2_tsne$identifier
+    labels <- as.data.frame(labels)
+    labels$label <- 1
+    labels$label[which(labels$labels %in% identifier[i])] <- 999 
+    labels$label <- as.factor(labels$label)
+    df2 <- data.frame(V1 = umap2$layout[,1], V2 =umap2$layout[,2], label = labels$label)
+    g2map <- ggplot(df2, aes(V1, V2))+
+      geom_point(aes(color = label),show.legend = T)
+    gmap[[i]] <- g2map
+  }
+  png(file=paste0(output_dir,"/task2/","task_duplicate_sig_id_umap.png"),width=12,height=9,units = "in",res=300)
+  gridExtra::grid.arrange(grobs = gmap,nrow = 5)
   dev.off()
   #task 2 utility of embeddings compare with gene distance
   get_cmap_signatures <- function(cmap_path_to_gctx, sig_ids, landmark = TRUE, landmark_df = NULL) {
@@ -469,11 +498,12 @@ file_info_dups <- readRDS("data/graph_info_df/file_info_dups.rds")
 ###
 distance_type = "cosine"
 ###
-output_dir <- "validation/g2v_act_clustered_norm"
+output_dir <- "validation/validation_graph2vec/g2v_clust_500"
 
 
 
 ds_path <- "C:/Users/user/Documents/phd/GSE92742_Broad_LINCS_Level5_COMPZ.MODZ_n473647x12328.gctx"
+library(tidyverse)
 landmark <- read_tsv(file = "data/cmap/util_files/cmap_landmark_genes.txt")
 
 sig_mapping <- readRDS("data/graph_info_df/sig_mapping.rds")
@@ -482,7 +512,17 @@ sig_mapping <- readRDS("data/graph_info_df/sig_mapping.rds")
 
 ### create test embedding df
 
-test <- read.csv("C:/Users/user/Documents/deepCAGE/embeddings/graph2vec/emb_clustered_norm_1500.csv")
+test <- read.csv("embeddings/graph2vec/emb_clustered_norm_500.csv")
+
+test_files <- as.character(test$X)
+test_files <- as.data.frame(test_files)
+test_files <- left_join(test_files,file_info,by = c("test_files"="files_combined"))
+test_files <- test_files %>% dplyr::select(test_files,emb)
+test_files <- left_join(test_files,file_info_dups,by = c("test_files"="files_combined"))
+test_files <- test_files %>% dplyr::select(test_files,emb.x,emb.y) %>% mutate(emb = if_else(condition = is.na(emb.x),true = emb.y,false = emb.x))
+test_files <- test_files %>% dplyr::select(test_files,emb)
+test <- left_join(test_files,test,by= c("test_files"="X"))
+test <- test[,-1]
 colnames(test)[1] <- "emb"
 #test <- test %>% mutate(emb = str_remove_all(string = emb,pattern = ".csv"))
 

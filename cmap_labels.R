@@ -2,54 +2,51 @@ library(tidyverse)
 
 ### cmap drugs
 
-cmap <- readRDS("cmap/pert_id_to_rdkit.rds")
-
-### pert info
-
-pert_info <- read.delim(file = "cmap/GSE92742_Broad_LINCS_pert_info.txt")
-
-pert_info <- pert_info %>%
-  filter(pert_type == "trt_cp") %>%
-  filter(inchi_key != -666)
-
-### add moa and target from the broad repo
-
-broad_repo <- read.delim(file = "cmap/Repurposing_Hub_export (1).txt" ,skip = 0)
-
-broad_repo <- broad_repo %>%
-  mutate(InChIKey = str_split(InChIKey,pattern = ",")) %>% unnest(InChIKey) %>%
-  mutate(InChIKey = str_trim(InChIKey)) %>%
-  filter(InChIKey != "") %>% unique()
-
-broad_repo <- broad_repo  %>%
-  mutate(broad_id = substr(x = as.character(Id),start = 1,stop = 13)) %>%
-  mutate(broad_id_old = substr(x = as.character(Deprecated.ID),start = 1,stop = 13)) %>%
-  mutate(Name = toupper(Name))
-
-broad_repo <- broad_repo %>%
-  mutate(SMILES = str_split(SMILES,pattern = ",")) %>% unnest(SMILES) %>%
-  mutate(SMILES = str_trim(SMILES)) %>%
-  filter(SMILES != "") %>% unique()
-
-write.csv(broad_repo,"cmap/broad_repo.csv")
-
-broad_repo_rdkit <- read.csv("cmap/broad_repo_rdkit.csv")
-
-broad_repo_rdkit <- broad_repo_rdkit[,-1]
-colnames(broad_repo_rdkit) <- c("rdkit","atoms")
-broad_repo <- cbind(broad_repo,broad_repo_rdkit)
-
-write.csv(as.character(broad_repo$rdkit),"cmap/repo_rdkit.csv")
-write.csv(as.character(cmap$rdkit),"cmap/cmap_smiles.csv")
+cmap <- readRDS("data/cmap/util_files/pert_id_to_rdkit.rds")
 
 
-#### read sims repo to cmap
+# read broad repurposing data
 
-sims <- read.csv("cmap/cmap_repo_sims.csv")
+broad_repo <- readRDS("data/cmap/repo_hub/broad_repurposing.rds")
+
+
+
+#### read the quality 1 smiles for which we hve the graphs
+
+data_dups <- readRDS("data/graph_info_df/file_info_dups.rds")
+data <- readRDS("data/graph_info_df/file_info_nodups.rds")
+
+data <- data %>% select(rdkit) %>% filter(!is.na(rdkit)) %>% unique()
+data_dups <- left_join(data_dups,cmap, by = "pert_id")
+data_dups <- data_dups %>% select(rdkit) %>% filter(!is.na(rdkit)) %>% unique()
+
+### rdkit with graph available
+q1_rdkits <- bind_rows(data,data_dups) %>% unique()
+
+sims <- read.csv("data/cmap/repo_hub/deepsnem_graph_repo_sims.csv") 
 sims <- sims[,-1]
+sims <- sims > 0.99
+sims <- sims+0
+rownames(sims) <- as.character(q1_rdkits$rdkit)
+sims <- sims[which(rowSums(sims)!=0),]
 
-sims_melt <- reshape::melt(sims)
+# add labels to rdkit wiith graphs
+labels <- data.frame(matrix(0,nrow=nrow(sims),ncol=ncol(broad_repo)+1))
+colnames(labels) <- c("rdkit_graph","rdkit_broad","moa","target","disease_area","indication")
+broad_repo$rdkit <- as.character(broad_repo$rdkit)
+broad_repo$moa <- as.character(broad_repo$moa)
+broad_repo$target <- as.character(broad_repo$target)
+broad_repo$disease_area <- as.character(broad_repo$disease_area)
+broad_repo$indication <- as.character(broad_repo$indication)
+for (i in 1:nrow(sims)) {
+  id <- which(sims[i,] == 1)[1]
+  labels[i,"rdkit_graph"] <- rownames(sims)[i]
+  labels[i,2:ncol(labels)] <- as.character(broad_repo[id,])
+}
 
-sims <- t(sims)
-max_sims <- apply(sims,1,max,na.rm = T)
-length(which(max_sims>=0.6))
+saveRDS(labels,"data/cmap/labels.rds")
+write.csv(labels,"data/cmap/labels.csv")
+moa <- labels %>% group_by(moa) %>% summarise(count = n()) %>% arrange(desc(count))
+target <- labels %>% group_by(target) %>% summarise(count = n()) %>% arrange(desc(count))
+disease_area <- labels %>% group_by(disease_area) %>% summarise(count = n()) %>% arrange(desc(count))
+indication <- labels %>% group_by(indication) %>% summarise(count = n()) %>% arrange(desc(count))
