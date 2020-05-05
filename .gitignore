@@ -5,3 +5,7 @@
 /data/cmap/util_files/GSE92742_Broad_LINCS_sig_info.txt
 /embeddings/graph2vec
 /embeddings/autoencoder_graph
+/embeddings/unet
+/group_check
+/graphs_combined
+/graphs_weighted

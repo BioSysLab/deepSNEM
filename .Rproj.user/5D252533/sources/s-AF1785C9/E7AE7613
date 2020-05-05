@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1586442621538.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "E7AE7613",
+    "lastKnownWriteTime" : 1588159993,
+    "last_content_update" : 1588159993139,
+    "path" : "~/deepSNEM/embedding_eval.R",
+    "project_path" : "embedding_eval.R",
+    "properties" : {
+        "cursorPosition" : "494,0",
+        "scrollLine" : "480"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

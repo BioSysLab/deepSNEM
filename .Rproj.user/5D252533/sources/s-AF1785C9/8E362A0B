@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1588699683290.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "8E362A0B",
+    "lastKnownWriteTime" : 1588716401,
+    "last_content_update" : 1588716401596,
+    "path" : "~/deepSNEM/protein_features.R",
+    "project_path" : "protein_features.R",
+    "properties" : {
+        "cursorPosition" : "95,77",
+        "scrollLine" : "82",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 8,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
