@@ -1,101 +1,67 @@
 from __future__ import absolute_import, division
 import torch
+from torch.functional import F
 from torch_geometric.data import Dataset
+from torch_geometric.utils import from_networkx
 import pandas as pd
 import numpy as np
 import pickle
+import networkx as nx
 
 from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler, Normalizer, RobustScaler, StandardScaler
 from sklearn.model_selection import train_test_split
 
-def csv2edge(path, prot_dict, shapes_dict, x_scaler=None, b_scaler=MinMaxScaler()):
+def wcsv2graph(fname, prot_dict, normalize=False):
     """
-        Reads the csv file and after converting it to a DataFrame, creates the edge matrix in the appropriate
-        COO format requested by torch geometric. Afterwards, creates the x tensor of the node features taken
-        from the prot_dict dictionary created.
-        Inputs 
-            path: path to graph csv file
-            prot_dict: protein features dictionary
-            shapes_dict: dictionary specifying the shapes of each graph with keys
-                        'max_prots', 'num_prot_features', 'num_edge_features'
-        Outputs 
-            edge_index: edge matrix tensor in COO format : (2, num_edges)
-            x: node features tensor with shape (num_nodes, num_features)
+    Weighted Graph Creator
     """
-    npf = 'num_prot_features' in shapes_dict
-    nef = 'num_edge_features' in shapes_dict
-    assert npf and nef
+    sample = pd.read_csv('../../snac_data/' + fname)
     
-    graph = pd.read_csv('../../snac_data/' + path)
-    node1 = graph.node1.to_numpy()
-    node2 = graph.node2.to_numpy()
-    sign = graph.sign.to_numpy()
-    
-    unique = np.unique(np.concatenate((node1, node2)))
-    
-    node_dict = {}
-    node_act = {}
-    
-    n1a1 = graph[['node1','activity1']]
-    n1a1.columns = ['node', 'act']
-    n2a2 = graph[['node2','activity2']]
-    n2a2.columns = ['node', 'act']
+    G = nx.from_pandas_edgelist(sample, source='node1', target='node2', 
+                            edge_attr=['sign','weight'], create_using=nx.DiGraph())
+    n1a1 = sample[['node1','upact1','downact1']]
+    n1a1.columns = ['node','upact','downact']
+
+    n2a2 = sample[['node2','upact2','downact2']]
+    n2a2.columns = ['node','upact','downact']
     na = pd.concat([n1a1,n2a2])
-    na = na.drop_duplicates('node').sort_values(by='node')
-    
-    for idx, node in enumerate(unique):
-            node_dict[node] = idx
-            
-    node1 = [node_dict[n] for n in node1]
-    node2 = [node_dict[n] for n in node2]
-    n1 = np.reshape(node1, (len(node1), 1))
-    n2 = np.reshape(node2, (len(node2), 1))
-    sign = np.reshape(sign, (len(sign), 1))
-    
-    # For the edge index matrix in the appropriate coo format
-    pairs_1 = np.hstack((n1, n2))
-    pairs_ws = np.hstack((pairs_1, sign))
-    
-    pairs_1 = pairs_1[np.argsort(pairs_1[:,0])]
-    pairs_ws = pairs_ws[np.argsort(pairs_ws[:,0])]
-    sign = pairs_ws[:, 2]
-    sign = np.reshape(sign, (len(sign), 1))
-    
-    pairs_flipped = np.flip(pairs_1, axis=1)
-    pairs_flipped_ws = np.hstack((pairs_flipped, sign))
-    
-    pairs = np.concatenate((pairs_ws, pairs_flipped_ws))
-    pairs = pairs[np.argsort(pairs[:, 0])]
-    edge_index = pairs[:, [0,1]]
-    edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
-    
-    # Creating the node attributes tensor using the prot_dict and shapes_dict files
-    num_prot_features, num_edge_features = [p for p in shapes_dict.values()]
-    
-    max_prots = len(unique)
-    x = np.zeros((max_prots, num_prot_features))
-    
-    for idx, node in enumerate(unique):
-        x[idx] = np.hstack((prot_dict[node], na['act'].to_numpy()[idx]))
+    na = na.drop_duplicates('node')
+    na = na.set_index('node')
+    na['acts'] = na[['upact','downact']].apply(lambda x: np.hstack(x), axis=1)
+    na = na.drop(['upact', 'downact'], axis=1)['acts'].to_dict()
 
-    x_scale = x_scaler
-    if x_scale is not None:
-        x = x_scale.fit_transform(x)
-    
-    x = torch.tensor(x, dtype=torch.float) 
-    
-    # Creating the edge_features matrix for the edges present in the graph
-    edge_feats = pairs[:, 2]
-    edge_feats = edge_feats.reshape(-1,1)
+    nx.set_node_attributes(G, prot_dict, 'x')
+    nx.set_node_attributes(G, na, 'acts')
 
-    scaler = b_scaler
-    edge_feats = scaler.fit_transform(edge_feats)
-    edge_feats = edge_feats.reshape(-1)
-    edge_feats = torch.tensor(edge_feats, dtype=torch.float)
+    data = from_networkx(G)
+    data.weight = data.weight.float()
+    data.sign = data.sign.float()
+    data.x = torch.cat((data.x, data.acts.double()), axis=1)
+    data.edge_attr = data.weight
     
-    return edge_index, x, edge_feats
+    data.weight = data.acts = None
+    #Normalize data
+    if normalize:
+        data.x = F.normalize(data.x)
+    
+    return data
 
-def load_prot_dict(pkl_file):
+def csv2graph(fname, prot_dict):
+    
+    df = pd.read_csv('../../snac_data/' + fname)
+    G = nx.from_pandas_edgelist(df, source='node1', target='node2', edge_attr='sign', create_using=nx.DiGraph)
+    nx.set_node_attributes(G, prot_dict, 'x')
+    data = from_networkx(G)
+    
+    # Custom Standard Scaler
+    m = data.x.mean(0, keepdim=True)
+    s = data.x.std(0, unbiased=False, keepdim=True)
+    data.x -= m
+    data.x /= s
+    
+    return data
+
+def load_prot_dict():
     prot_path = '../data/lc_embeddings_raw.pkl'
     prot_dict = {}
     with open(prot_path, 'rb') as f:
@@ -113,6 +79,13 @@ def load_prot_dict(pkl_file):
 
     return prot_dict
 
+def load_go_emb_prot_dict(path_to_dict):
+    prot_dict = {}
+    with open(path_to_dict, 'rb') as f:
+        prot_dict = pickle.load(f)
+    
+    return prot_dict
+
 def train_val_paths(train_size, val_ratio, samples_csv, path_to_files=None):
     path_to_files = '../../snac_data/file_info.csv'
 
@@ -126,22 +99,41 @@ def train_val_paths(train_size, val_ratio, samples_csv, path_to_files=None):
     samples = set(samples)
     non_samples = set(finfo.files_combined).difference(samples)
 
-    fnames = np.random.choice(list(non_samples), train_size)
+    fnames = np.random.choice(list(samples), train_size)
     X, val = train_test_split(fnames, test_size=val_ratio)
 
     return X, val, finfo, np.array(list(samples)) 
 
-class SNDataset(Dataset):
-    def __init__(self, fnames, prot_dict, shape_dict):
-        super(SNDataset, self).__init__()
+class SNDatasetAuto(Dataset):
+    def __init__(self, fnames, prot_dict, transforms=None):
+        super(SNDatasetAuto, self).__init__()
         self.fnames = fnames
         self.pd = prot_dict
-        self.sd = shape_dict 
+        self.transforms = transforms
         
     def len(self):
         return len(self.fnames)
         
     def get(self, idx):
-        edge_index, x, edge_attr = csv2edge(self.fnames[idx], self.pd, self.sd)
-        data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
+        
+        data = csv2graph(self.fnames[idx], self.pd)
+        data.train_mask = data.val_mask = data.test_mask = data.y = None
+        
+        return data
+    
+class W_SNDataset(Dataset):
+    def __init__(self, fnames, prot_dict, norm=False, transform=None):
+        super(W_SNDataset, self).__init__()
+        self.fnames = fnames
+        self.pd = prot_dict
+        self.norm = norm
+        self.transform = transform
+        
+    def len(self):
+        return len(self.fnames)
+        
+    def get(self, idx):
+        
+        data = wcsv2graph(self.fnames[idx], self.pd, self.norm)
+
         return data
