@@ -6,6 +6,7 @@
 /embeddings/graph2vec
 /embeddings/autoencoder_graph
 /embeddings/unet
+/embeddings/ged_distance
 /group_check
 /graphs_combined
 /graphs_weighted

@@ -1,4 +1,4 @@
-eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,landmark,sig_mapping, sims, output_dir){
+eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,landmark,sig_mapping, sims, output_dir, task3){
   # test is a dataframe where there is a column emb which is in the
   # form of the column emb of file info
   # file info, dataframe 
@@ -135,7 +135,7 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
   
   png(file=paste0(output_dir,"/task1/","task1_same_sig_id_tsne.png"),width=9,height=9,units = "in",res=300)
   gg1 <- ggplot(df, aes(V1, V2))+
-     geom_point(aes(color = label))
+     geom_point(aes(color = label))+aes(group=rev(label))
   print(gg1)
   dev.off()
   
@@ -143,7 +143,7 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
   df_map <- data.frame(V1 = map$layout[,1], V2 = map$layout[,2], label = emb_tsne$label)
   png(file=paste0(output_dir,"/task1/","task1_same_sig_id_umap.png"),width=9,height=9,units = "in",res=300)
   gg_map <- ggplot(df_map, aes(V1, V2))+
-    geom_point(aes(color = label))
+    geom_point(aes(color = label))+aes(group=rev(label))
   print(gg_map)
   dev.off()
   print("TASK 1 FINISHED")
@@ -164,8 +164,11 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
         dup_emb <- sample_n(filt_embs,1)
         dup_embs <- rbind(dup_emb,dup_embs)
       }
-      dup_distance <- distance_function(dup_embs)
-      dup_distances <- rbind(dup_distance,dup_distances)
+      if (nrow(dup_embs)>1) {
+        dup_distance <- distance_function(dup_embs)
+        dup_distances <- rbind(dup_distance,dup_distances)
+      }
+      
     }
   }
   
@@ -217,16 +220,16 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
   emb_task2_tsne <- left_join(emb_task2_tsne,task2_tsne_labels)
   emb_task2_tsne$identifier <- as.factor(emb_task2_tsne$identifier)
   
-  tsne2 <- Rtsne(emb_task2_tsne[,-c(1,ncol(emb_task2_tsne))], dims = 2, perplexity=5, verbose=TRUE, max_iter = 3000,check_duplicates = F)
+  tsne2 <- Rtsne(emb_task2_tsne[,-c(1,ncol(emb_task2_tsne))], dims = 2, perplexity=5, verbose=TRUE, max_iter = 1000,check_duplicates = F)
   g <- NULL
   for (i in 1:25) {
     labels <- emb_task2_tsne$identifier
     labels <- as.data.frame(labels)
-    labels$label <- 1
-    labels$label[which(labels$labels %in% identifier[i])] <- 999 
+    labels$label <- "duplicate"
+    labels$label[which(labels$labels %in% identifier[i])] <- "non duplicate" 
     labels$label <- as.factor(labels$label)
     df2 <- data.frame(V1 = tsne2$Y[,1], V2 =tsne2$Y[,2], label = labels$label)
-    g2 <- ggplot(df2, aes(V1, V2))+
+    g2 <- ggplot(df2 %>% mutate(label == "duplicate") %>% arrange(label), aes(V1, V2))+
       geom_point(aes(color = label),show.legend = T)
     g[[i]] <- g2
   }
@@ -240,11 +243,11 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
   for (i in 1:25) {
     labels <- emb_task2_tsne$identifier
     labels <- as.data.frame(labels)
-    labels$label <- 1
-    labels$label[which(labels$labels %in% identifier[i])] <- 999 
+    labels$label <- "duplicate"
+    labels$label[which(labels$labels %in% identifier[i])] <- "non duplicate" 
     labels$label <- as.factor(labels$label)
     df2 <- data.frame(V1 = umap2$layout[,1], V2 =umap2$layout[,2], label = labels$label)
-    g2map <- ggplot(df2, aes(V1, V2))+
+    g2map <- ggplot(df2 %>% mutate(label == "duplicate") %>% arrange(label), aes(V1, V2))+
       geom_point(aes(color = label),show.legend = T)
     gmap[[i]] <- g2map
   }
@@ -370,6 +373,7 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
   write.csv(output_task2genes,paste0(output_dir,"/task2/","task2_stats_genes.csv"))
   print("TASK 2 FINISHED")
   # Task 3 similar chemical structure similar embeddings and comparison with gene dist
+  if (task3) {
   file_info <- left_join(file_info,sig_mapping,by = c("sig_id"="sig_id2"))
   cell_info <- file_info %>% group_by(cell_id) %>% summarise(count = n_distinct(sig_id))
   cell_info <- cell_info[order(cell_info$count,decreasing = T),]
@@ -481,7 +485,8 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
     
   
       
-    }
+  }
+  }
   
   }
   
@@ -498,7 +503,7 @@ file_info_dups <- readRDS("data/graph_info_df/file_info_dups.rds")
 ###
 distance_type = "cosine"
 ###
-output_dir <- "validation/validation_unet/unet_128"
+output_dir <- "validation/validation_ged/ged_512_4ep"
 
 
 
@@ -512,7 +517,7 @@ sig_mapping <- readRDS("data/graph_info_df/sig_mapping.rds")
 
 ### create test embedding df
 
-test <- read.csv("embeddings/unet/embeddings_unet_128.csv")
+test <- read.csv("embeddings/ged_distance/ged_embs512_seen_4ep.csv")
 
 test_files <- as.character(test$X)
 test_files <- as.data.frame(test_files)
@@ -537,4 +542,4 @@ sims <- readRDS("data/rdkit/rdkit_sims.rds")
 
 eval_emb(test = test, file_info = file_info ,
          distance_type = distance_type,output_dir = output_dir, file_info_dups = file_info_dups, 
-         ds_path = ds_path,landmark = landmark, sig_mapping = sig_mapping, sims = sims)
+         ds_path = ds_path,landmark = landmark, sig_mapping = sig_mapping, sims = sims , task3=F)

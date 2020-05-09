@@ -233,3 +233,215 @@ multiples <- bind_rows(multiples,multi6)
 
 saveRDS(multiples,"data/cmap/labels_multiples_5_5.rds")
 saveRDS(labels,"data/cmap/labels_5_5.rds")
+
+labels <- readRDS("data/cmap/labels_5_5.rds")
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count))
+multiples <- readRDS("data/cmap/labels_multiples_5_5.rds")
+
+# mapk and mek inhibitor
+
+id <- which(labels$moa == "MAP kinase inhibitor|MEK inhibitor")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("mek_inhibitor","mapk_inhibitor")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+labels$moa_v1[which(labels$moa == "MEK inhibitor")] <- "mek_inhibitor"
+
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count))
+
+#mapk inhibitors
+
+mapk_inhibitor <- c("p38 MAPK inhibitor","MAP kinase inhibitor")
+labels$moa_v1[which(labels$moa_v1 %in% mapk_inhibitor)] <- "mapk_inhibitor"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count))
+
+# nfkb and akt inhibitors
+
+id <- which(labels$moa == "AKT inhibitor|differentiation inducer|NFKB pathway inhibitor")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("akt_inhibitor","nfkb_inhibitor")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+labels$moa_v1[which(labels$moa == "NFkB pathway inhibitor")] <- "nfkb_inhibitor"
+labels$moa_v1[which(labels$moa == "AKT inhibitor")] <- "akt_inhibitor"
+
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count))
+
+# nfkb and ikk inhibitor
+
+id <- which(labels$moa == "IKK inhibitor|NFkB pathway inhibitor")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("ikk_inhibitor","nfkb_inhibitor")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+labels$moa_v1[which(labels$moa == "IKK inhibitor")] <- "ikk_inhibitor"
+
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count))
+
+# nfkb and proteasome inhibitor
+
+id <- which(labels$moa == "NFkB pathway inhibitor|proteasome inhibitor")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("proteasome_inhibitor","nfkb_inhibitor")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+labels$moa_v1[which(labels$moa == "proteasome inhibitor")] <- "proteasome_inhibitor"
+
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count))
+
+#nfkb and tp 53 activator
+
+id <- which(labels$moa == "cytokine production inhibitor|NFkB pathway inhibitor|TP53 activator")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("tp53_activator","nfkb_inhibitor")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+#labels$moa_v1[which(labels$moa == "proteasome inhibitor")] <- "proteasome_inhibitor"
+
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count))
+
+#protein synthesis inhibitor and p450 inhibitor
+
+id <- which(labels$moa == "cytochrome P450 inhibitor|protein synthesis inhibitor")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("p450_inhibitor","protein_synthesis_inhibitor")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+labels$moa_v1[which(labels$moa == "protein synthesis inhibitor")] <- "protein_synthesis_inhibitor"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count))
+
+# retinoid receptor agonist_ligand
+
+retinoid <- c("retinoid receptor agonist","apoptosis stimulant|retinoid receptor agonist","retinoid receptor ligand","retinoid receptor binder")
+labels$moa_v1[which(labels$moa_v1 %in% retinoid)] <- "retinoid_agonist_ligand"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count))
+
+
+# microtubule and tubulin polymerization inhibitors
+
+microtubule_inhibitor <- c("tubulin polymerization inhibitor",
+                           "microtubule inhibitor|tubulin polymerization inhibitor",
+                           "microtubule inhibitor")
+labels$moa_v1[which(labels$moa_v1 %in% microtubule_inhibitor)] <- "microtubule_inhibitor"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count))
+
+#bacterial dna inhibitor
+
+bact_dna <- c("bacterial DNA gyrase inhibitor","bacterial DNA inhibitor")
+labels$moa_v1[which(labels$moa_v1 %in% bact_dna)] <- "bacterial_dna_inhibitor"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+
+# dopamine agonist and serotonin antagonist
+
+id <- which(labels$moa == "dopamine receptor agonist|serotonin receptor antagonist")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("dopamine_receptor_agonist","serotonin_receptor_antagonist")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+labels$moa_v1[which(labels$moa == "dopamine receptor agonist")] <- "dopamine_receptor_agonist"
+labels$moa_v1[which(labels$moa == "serotonin receptor antagonist")] <- "serotonin_receptor_antagonist"
+
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count))
+
+# serotonin agonist 
+sero_agonist <- c("serotonin receptor agonist","serotonin receptor partial agonist")
+labels$moa_v1[which(labels$moa_v1 %in% sero_agonist)] <- "serotonin_receptor_agonist"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+
+#mTOR inhibitor
+labels$moa_v1[which(labels$moa == "mTOR inhibitor")] <- "mtor_inhibitor"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+
+# opioid receptor agonist and antagonist
+
+id <- which(labels$moa == "opioid receptor agonist|opioid receptor antagonist")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("opioid_receptor_agonist","opioid_receptor_antagonist")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+labels$moa_v1[which(labels$moa == "opioid receptor antagonist")] <- "opioid_receptor_antagonist"
+labels$moa_v1[which(labels$moa == "opioid receptor agonist")] <- "opioid_receptor_agonist"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+
+#phosphodiesterase and leukotriene inhibitors
+
+id <- which(labels$moa == "leukotriene receptor antagonist|phosphodiesterase inhibitor")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("leukotriene_receptor_antagonist","phosphodiesterase_inhibitor")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+labels$moa_v1[which(labels$moa == "phosphodiesterase inhibitor")] <- "phosphodiesterase_inhibitor"
+labels$moa_v1[which(labels$moa == "leukotriene receptor antagonist")] <- "leukotriene_receptor_antagonist"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+
+# glycogen synthesis and lipoxygenase
+
+id <- which(labels$moa == "glycogen synthase kinase inhibitor|lipoxygenase inhibitor")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("glycogen_synthase_kinase_inhibitor","lipoxygenase_inhibitor")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+labels$moa_v1[which(labels$moa == "glycogen synthase kinase inhibitor")] <- "glycogen_synthase_kinase_inhibitor"
+labels$moa_v1[which(labels$moa == "lipoxygenase inhibitor")] <- "lipoxygenase_inhibitor"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+
+#leukotriene and lipoxygenase
+
+id <- which(labels$moa == "leukotriene receptor antagonist|lipoxygenase inhibitor")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("leukotriene_receptor_antagonist","lipoxygenase_inhibitor")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+
+#phosphodiesterase inhibitor
+
+phosphodiesterase <- c("phosphodiesterase_inhibitor","phosphodiesterase inhibitor|platelet aggregation inhibitor")
+labels$moa_v1[which(labels$moa_v1 %in% phosphodiesterase)] <- "phosphodiesterase_inhibitor"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+
+# calcium channel blocker
+
+calcium <- c("calcium channel blocker","T-type calcium channel blocker")
+labels$moa_v1[which(labels$moa_v1 %in% calcium)] <- "calcium_channel_blocker"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+
+# leucine raf inhibitors
+
+id <- which(labels$moa == "leucine rich repeat kinase inhibitor|RAF inhibitor")
+multi <- labels[id,]
+multi <- bind_rows(multi,multi)
+multi$moa_v1 <- c("leucine_inhibitor","leucine_inhibitor","raf_inhibitor","raf_inhibitor")
+multiples <- bind_rows(multiples,multi)
+
+labels <- labels[-id,]
+labels$moa_v1[which(labels$moa == "leucine rich repeat kinase inhibitor")] <- "leucine_inhibitor"
+labels$moa_v1[which(labels$moa == "RAF inhibitor")] <- "raf_inhibitor"
+moa_v1 <- labels %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+
+
+saveRDS(multiples,"data/cmap/labels_multiples_8_5.rds")
+saveRDS(labels,"data/cmap/labels_8_5.rds")

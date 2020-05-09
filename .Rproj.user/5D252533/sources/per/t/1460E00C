@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1588953151396.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "1460E00C",
+    "lastKnownWriteTime" : 13229817826639872,
+    "last_content_update" : 1588953151396,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "D7B29576",
+        "caption" : "moa_v1",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=moa_v1&cache_key=D7B29576",
+        "displayedObservations" : "323",
+        "environment" : "",
+        "object" : "moa_v1",
+        "preview" : "0",
+        "totalObservations" : "323",
+        "variables" : "3"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}
