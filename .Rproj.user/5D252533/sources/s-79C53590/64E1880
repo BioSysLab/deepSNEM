@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "40|25|44|0|\n",
-    "hash" : "1821441452",
+    "hash" : "1647187969",
     "id" : "64E1880",
-    "lastKnownWriteTime" : 1588964149,
-    "last_content_update" : 1588964149271,
+    "lastKnownWriteTime" : 1589201389,
+    "last_content_update" : 1589201389857,
     "path" : "~/deepSNEM/cmap_labels.R",
     "project_path" : "cmap_labels.R",
     "properties" : {
-        "cursorPosition" : "447,0",
-        "scrollLine" : "417"
+        "cursorPosition" : "1039,121",
+        "scrollLine" : "1029"
     },
     "relative_order" : 2,
     "source_on_save" : false,
