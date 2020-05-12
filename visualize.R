@@ -7,6 +7,9 @@ prepape_embs <- function(emb, type = "unweighted", file_info, labels, keep_one, 
   # add sig id info to embs
   emb <- left_join(emb,file_info,by=c("emb"="emb"))
   # add label info to embs
+  labels <- labels %>% group_by(moa_v1) %>% mutate(count = n_distinct(rdkit_graph)) %>% ungroup()
+  labels <- labels %>% group_by(rdkit_graph) %>% filter(count == max(count)) %>% ungroup()
+  labels <- labels %>% group_by(rdkit_graph) %>% sample_n(1) %>% ungroup()
   emb <- left_join(emb,labels,by = c("rdkit"="rdkit_graph"))
   # keep one emb for each sig id
   if (keep_one) {
@@ -14,23 +17,21 @@ prepape_embs <- function(emb, type = "unweighted", file_info, labels, keep_one, 
   }
   if (ave) {
     aver <- aggregate(emb[, 2:513], list(emb$sig_id), mean)
-    file_info_1 <- file_info %>% select(sig_id,rdkit) %>% unique()
+    file_info_1 <- file_info %>% dplyr::select(sig_id,rdkit) %>% unique()
     emb <- left_join(aver,file_info_1,by = c("Group.1"="sig_id"))
     emb <- left_join(emb,labels,by = c("rdkit"="rdkit_graph"))
     colnames(emb)[1] <- "sig_id"
   }
   return(emb)
 }
+
 file_info <- readRDS("data/graph_info_df/file_info_nodups.rds")
-emb <- read.csv("embeddings/ged_distance/ged_embs512_seen_4ep.csv")
-emb <- emb[,-1]
-colnames(emb)[1] <- "emb"
-saveRDS(emb,"embeddings/ged_distance/ged_embs512_seen_4ep.rds")
-labels <- readRDS("data/cmap/labels_first_pass.rds")
+emb <- readRDS("embeddings/ged_distance/ged_embs512_seen_4ep.rds")
+labels <- readRDS("data/cmap/labels/labels_first_pass.rds")
 emb_proc <- prepape_embs(emb = emb,file_info = file_info,labels = labels,keep_one = F ,ave = T)
 
 
-visualize_moa <- function(emb,output_dir,moa_n,emb_size,perpl_emb,iter,init_dim,name){
+visualize_moa_emb <- function(emb,output_dir,moa_n,emb_size,perpl_emb,iter,init_dim,name){
   library(tidyverse)
   library(Rtsne)
   addSmallLegend <- function(myPlot, pointSize = 0.5, textSize = 3, spaceLegend = 0.1) {
@@ -53,5 +54,82 @@ visualize_moa <- function(emb,output_dir,moa_n,emb_size,perpl_emb,iter,init_dim,
   dev.off()
 }
 
-visualize_moa(emb_proc,output_dir = "vis",moa_n = 10,emb_size = 512,
+visualize_moa_emb(emb_proc,output_dir = "vis",moa_n = 10,emb_size = 512,
               perpl_emb = 10,init_dim = 80,iter = 1000,name = "test_ave_10perpl_1000_iter_10moa")
+
+
+visualize_moa_genes <- function(emb,output_dir,moa_n,perpl,iter,init_dim,name,ds_path,landmark,sig_map){
+  library(tidyverse)
+  library(Rtsne)
+  addSmallLegend <- function(myPlot, pointSize = 0.5, textSize = 3, spaceLegend = 0.1) {
+    myPlot +
+      guides(shape = guide_legend(override.aes = list(size = pointSize)),
+             color = guide_legend(override.aes = list(size = pointSize))) +
+      theme(legend.title = element_text(size = textSize), 
+            legend.text  = element_text(size = textSize),
+            legend.key.size = unit(spaceLegend, "lines"))
+  }
+  get_cmap_signatures <- function(cmap_path_to_gctx, sig_ids, landmark = TRUE, landmark_df = NULL) {
+    
+    
+    library(tidyverse)
+    library(cmapR)
+    library(rhdf5)
+    library(AnnotationDbi)
+    library(org.Hs.eg.db)
+    
+    ds_path <- cmap_path_to_gctx
+    if (landmark == TRUE) {
+      
+      cmap_gctx <- parse.gctx(ds_path,rid = as.character(landmark_df$`Entrez ID`), cid = sig_ids)
+      cmap <- cmap_gctx@mat
+      
+      cmap <- cmap[as.character(landmark_df$`Entrez ID`),]
+      
+      rownames(cmap) <- landmark_df$Symbol
+    }
+    
+    if (landmark == FALSE) {
+      
+      cmap_gctx <- parse.gctx(ds_path, cid = sig_ids)
+      cmap <- cmap_gctx@mat
+      
+      entrez <- rownames(cmap)
+      anno <- AnnotationDbi::select(org.Hs.eg.db,
+                                    keys = entrez,
+                                    columns = c("SYMBOL", "GENENAME","ENTREZID"),
+                                    keytype = "ENTREZID")
+      
+      anno <- anno %>%
+        filter(!is.na(SYMBOL))
+      
+      cmap <- cmap[anno$ENTREZID,]
+      
+      rownames(cmap) <- anno$SYMBOL
+    }
+    
+    
+    return(cmap)
+    
+  }
+  moa <- emb %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+  moa_vis <- moa$moa_v1[1:moa_n]
+  emb <- emb[which(as.character(emb$moa_v1) %in% moa_vis),]
+  emb <- left_join(emb,sig_map,by = c("sig_id"="sig_id2"))
+  genes <- get_cmap_signatures(ds_path,sig_ids = as.character(emb$sig_id.y),landmark = T,landmark_df = landmark)
+  genes <- t(genes)
+  tsne_emb <- Rtsne(scale(genes), dims = 2, perplexity=perpl, verbose=TRUE, max_iter = iter,initial_dims = init_dim,check_duplicates = F)
+  df_emb <- data.frame(V1 = tsne_emb$Y[,1], V2 =tsne_emb$Y[,2], label = as.factor(emb$moa_v1))
+  gtsne <- ggplot(df_emb, aes(V1, V2))+
+    geom_point(aes(color = label),show.legend = T) + scale_color_discrete()
+  png(file=paste0(output_dir,"/",as.character(name),"_moa_tsne.png"),width=9,height=9,units = "in",res=300)
+  print(addSmallLegend(gtsne))
+  dev.off()
+}
+sig_mapping <- readRDS("data/graph_info_df/sig_mapping.rds")
+ds_path <- "C:/Users/user/Documents/phd/GSE92742_Broad_LINCS_Level5_COMPZ.MODZ_n473647x12328.gctx"
+landmark <- read_tsv(file = "data/cmap/util_files/cmap_landmark_genes.txt")
+
+visualize_moa_genes(emb_proc,output_dir = "vis",moa_n = 10,
+                  perpl = 15,init_dim = 80,iter = 1000,name = "test_genes_15perpl_1000_iter_10moa",
+                  ds_path = ds_path, landmark = landmark,sig_map = sig_mapping)
