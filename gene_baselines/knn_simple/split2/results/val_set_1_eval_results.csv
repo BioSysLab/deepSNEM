@@ -1,0 +1,17 @@
+"","drugs","moa_v1","belongs","assigned","sig_accuracy","drug_accuracy"
+"1","C[C@H]1O[C@@H](O[C@H]2[C@@H](O)C[C@H](O[C@H]3[C@@H](O)C[C@H](O[C@H]4CC[C@@]5(C)[C@@H](CC[C@H]6[C@@H]5C[C@@H](O)[C@]5(C)[C@@H](C7=CC(=O)OC7)CC[C@]65O)C4)O[C@@H]3C)O[C@@H]2C)C[C@H](O)[C@@H]1O","atp_synthesis_inhibitor",1,"atp_synthesis_inhibitor",0.343137254901961,0.4375
+"2","CN1CC[C@H](c2c(O)cc(O)c3c(=O)cc(-c4ccccc4Cl)oc23)[C@H](O)C1","cdk_inhibitor",1,"cdk_inhibitor",0.343137254901961,0.4375
+"3","C[C@@H]1CC[C@H]2[C@@H](C)C(OC(=O)CCC(=O)O)OC3O[C@]4(C)CC[C@@H]1[C@]32OO4","dna_rna_damage",0,"beta-catenin inhibitor",0.343137254901961,0.4375
+"4","O=C1NCN(c2ccccc2)C12CCN(CCCC(c1ccc(F)cc1)c1ccc(F)cc1)CC2","dopamine_antagonist",1,"calcium_channel_blocker/KATP activator|Kir6 channel (KATP) activator|vasodilator/sphingosine kinase inhibitor/dopamine_antagonist/autotaxin inhibitor",0.343137254901961,0.4375
+"5","CCN(CC)CC1CCN(c2ncc3ncnc(Nc4ccc(F)c(Cl)c4)c3n2)CC1","EGFR_inhibitor",0,"dopamine_antagonist",0.343137254901961,0.4375
+"6","O=C(/C=C/c1cccc(S(=O)(=O)Nc2ccccc2)c1)NO","hdac_inhibitor",1,"hdac_inhibitor",0.343137254901961,0.4375
+"7","CCc1cc(-c2n[nH]c(C)c2-c2ccc3c(c2)OCCO3)c(O)cc1O","HSP inhibitor",0,"constitutive androstane receptor (CAR) agonist",0.343137254901961,0.4375
+"8","COc1nccc(-c2c(-c3ccc(F)cc3)ncn2[C@H]2CC[C@H](O)CC2)n1","mapk_inhibitor",0,"dna_rna_damage/ppar_agonist",0.343137254901961,0.4375
+"9","COc1ccc2[nH]c(C(=O)c3ccccc3)cc2c1","microtubule_inhibitor",1,"microtubule_inhibitor",0.343137254901961,0.4375
+"10","Nc1ccc(-c2ccc3ncc4ccc(=O)n(-c5cccc(C(F)(F)F)c5)c4c3c2)cn1","mtor_inhibitor",1,"mtor_inhibitor",0.343137254901961,0.4375
+"11","CC[C@H]1OC(=O)[C@H](C)[C@@H](O[C@H]2C[C@@](C)(OC)[C@@H](O)[C@H](C)O2)[C@H](C)[C@@H](O[C@@H]2O[C@H](C)C[C@H](N(C)C)[C@H]2O)[C@](C)(O)C[C@@H](C)C(=O)[C@H](C)[C@@H](O)[C@]1(C)O","nfkb_inhibitor",0,"phosphodiesterase_inhibitor",0.343137254901961,0.4375
+"12","Cn1c(=O)n(-c2ccc(C(C)(C)C#N)cc2)c2c3cc(-c4cnc5ccccc5c4)ccc3ncc21","pi3k_inhibitor",0,"mtor_inhibitor",0.343137254901961,0.4375
+"13","Cn1cc(C2=C(c3cn(CCCSC(=N)N)c4ccccc34)C(=O)NC2=O)c2ccccc21","pkc_inhibitor",0,"focal adhesion kinase inhibitor/dna_rna_damage",0.343137254901961,0.4375
+"14","COc1ccc(C[C@H](N)C(=O)N[C@@H]2[C@@H](CO)OC(n3cnc4c(N(C)C)ncnc43)[C@@H]2O)cc1","protein_synthesis_inhibitor",0,"proteasome_inhibitor",0.343137254901961,0.4375
+"15","CN(C)CCOc1ccc(-c2nc(-c3ccncc3)c(-c3ccc4c(c3)CC/C4=N/O)[nH]2)cc1","raf_inhibitor",1,"mtor_inhibitor/raf_inhibitor/dopamine_antagonist",0.343137254901961,0.4375
+"16","CC1=C(/C=C/C(C)=C/C=C/C(C)=C/C(=O)Nc2ccc(O)cc2)C(C)(C)CCC1","retinoid_agonist_ligand",0,"phosphatase_inhibitor/pkc_inhibitor/oxidative stress inducer/calmodulin antagonist",0.343137254901961,0.4375

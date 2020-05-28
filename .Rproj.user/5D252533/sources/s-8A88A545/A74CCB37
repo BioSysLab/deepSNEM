@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1589142130871.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "10|100|52|2|\n",
+    "hash" : "0",
+    "id" : "A74CCB37",
+    "lastKnownWriteTime" : 1589157350,
+    "last_content_update" : 1589157350689,
+    "path" : "~/deepSNEM/group_check_yo.R",
+    "project_path" : "group_check_yo.R",
+    "properties" : {
+        "cursorPosition" : "126,73",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

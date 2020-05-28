@@ -1,0 +1,17 @@
+"","drugs","moa_v1","belongs","assigned","sig_accuracy","drug_accuracy"
+"1","CCCCCC[C@H]1C(=O)O[C@H](C)C(NC(=O)c2cccc(NC=O)c2O)C(=O)O[C@@H](C)[C@@H]1OC(=O)CC(C)C","atp_synthesis_inhibitor",0,"sodium channel blocker",0.296875,0.3125
+"2","CC(C)[C@H](CO)Nc1nc(Nc2cccc(Cl)c2)c2ncn(C(C)C)c2n1","cdk_inhibitor",0,"IGF-1 inhibitor",0.296875,0.3125
+"3","C[C@H]1COc2c(C3(N)CC3)c(F)cc3c(=O)c(C(=O)O)cn1c23","dna_rna_damage",0,"HIV protease inhibitor",0.296875,0.3125
+"4","CN1CCCCC1CCN1c2ccccc2Sc2ccc(S(C)=O)cc21","dopamine_antagonist",0,"vesicular monoamine transporter inhibitor/faah_inhibitor/insulin secretagogue",0.296875,0.3125
+"5","COCC(=O)NC/C=C/c1ccc2ncnc(Nc3ccc(Oc4ccc(C)nc4)c(C)c3)c2c1","EGFR_inhibitor",0,"bcr_abl_inhibitor",0.296875,0.3125
+"6","CN1CCc2c(c3ccccc3n2Cc2ccc(C(=O)NO)cc2)C1","hdac_inhibitor",0,"IP1 prostacyclin receptor agonist",0.296875,0.3125
+"7","NS(=O)(=O)C#Cc1ccccc1","HSP inhibitor",0,"serotonin_receptor_agonist/estrogenic hormone/ubiquitin specific protease inhibitor/phosphatase_inhibitor/oxidative stress inducer/fatty acid synthase inhibitor/adenylyl cyclase activator",0.296875,0.3125
+"8","COc1cc(N2CCN(C)CC2)ccc1Nc1ncc2c(n1)N(C)c1ccccc1C(=O)N2C","mapk_inhibitor",1,"mapk_inhibitor",0.296875,0.3125
+"9","CC[C@]1(O)C[C@@H]2CN(CCc3c([nH]c4ccccc34)[C@@](C(=O)OC)(c3cc4c(cc3OC)N(C)[C@H]3[C@@](O)(C(=O)OC)[C@H](OC(C)=O)[C@]5(CC)C=CCN6CC[C@]43[C@@H]65)C2)C1","microtubule_inhibitor",1,"microtubule_inhibitor",0.296875,0.3125
+"10","CNC(=O)Nc1ccc(-c2nc(N3CC4CCC(C3)O4)c3cnn(C4CCC5(CC4)OCCO5)c3n2)cc1","mtor_inhibitor",1,"mtor_inhibitor",0.296875,0.3125
+"11","C=C1C(=O)O[C@H]2[C@H]1CC/C(C)=C\CC[C@@]1(C)O[C@H]21","nfkb_inhibitor",1,"fatty acid synthase inhibitor/nfkb_inhibitor/angiotensin receptor antagonist",0.296875,0.3125
+"12","Nc1cc(C(F)(F)F)c(-c2cc(N3CCOCC3)nc(N3CCOCC3)n2)cn1","pi3k_inhibitor",0,"mtor_inhibitor",0.296875,0.3125
+"13","Cc1cc(N)c2ccccc2[n+]1CCCCCCCCCC[n+]1c(C)cc(N)c2ccccc21","pkc_inhibitor",0,"potassium channel blocker",0.296875,0.3125
+"14","C[C@H]1C[C@H](C)C(=O)[C@H]([C@H](O)CC2CC(=O)NC(=O)C2)C1","protein_synthesis_inhibitor",0,"phosphodiesterase_inhibitor",0.296875,0.3125
+"15","CCCS(=O)(=O)Nc1ccc(F)c(C(=O)c2c[nH]c3ncc(Cl)cc23)c1F","raf_inhibitor",1,"raf_inhibitor",0.296875,0.3125
+"16","CC(C=CC1=C(C)CCCC1(C)C)=CC=CC(C)=CC(=O)Nc1ccc(O)cc1","retinoid_agonist_ligand",0,"penicillin binding protein inhibitor/atp_synthesis_inhibitor",0.296875,0.3125

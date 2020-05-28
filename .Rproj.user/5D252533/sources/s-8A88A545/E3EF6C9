@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1590142618907.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "10|92|35|0|\n36|86|43|0|\n",
+    "hash" : "0",
+    "id" : "E3EF6C9",
+    "lastKnownWriteTime" : 1590151076,
+    "last_content_update" : 1590397263258,
+    "path" : "~/deepSNEM/extract_test_drugs.R",
+    "project_path" : "extract_test_drugs.R",
+    "properties" : {
+        "cursorPosition" : "6,38",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

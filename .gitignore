@@ -1,12 +1,15 @@
 /data/cmap/repo_hub
 /data/cmap/util_files
 /data/rdkit
+/data/graph_additional
 /validation
 /data/cmap/util_files/GSE92742_Broad_LINCS_sig_info.txt
 /embeddings/graph2vec
 /embeddings/autoencoder_graph
 /embeddings/unet
 /embeddings/ged_distance
+/embeddings/ged_distance_semi
+/models/ugraphemb
 /group_check
 /graphs_combined
 /graphs_weighted

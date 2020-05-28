@@ -1,0 +1,17 @@
+"","drugs","moa_v1","belongs","assigned","sig_accuracy","drug_accuracy"
+"1","C[C@]12CC[C@H]3[C@@H](CC[C@]4(O)C[C@@H](O)CC[C@]34C=O)[C@@]1(O)CC[C@@H]2C1=CC(=O)OC1","atp_synthesis_inhibitor",1,"atp_synthesis_inhibitor",0.573170731707317,0.75
+"2","Cc1ncc(-c2ccnc(Nc3ccc(S(C)(=O)=O)cc3)n2)n1C(C)C","cdk_inhibitor",1,"cdk_inhibitor",0.573170731707317,0.75
+"3","CO[C@]12[C@@H](COC(N)=O)C3=C(C(=O)C(C)=C(N)C3=O)N1CC1N[C@H]12","dna_rna_damage",1,"dna_rna_damage",0.573170731707317,0.75
+"4","CNc1cc(OC)c(C(=O)NC2CCN(Cc3ccccc3)C2C)cc1Cl","dopamine_antagonist",0,"serotonin_receptor_agonist",0.573170731707317,0.75
+"5","C=CC(=O)Nc1cc2c(Nc3ccc(F)c(Cl)c3)ncnc2cc1OCCCN1CCOCC1","EGFR_inhibitor",1,"EGFR_inhibitor",0.573170731707317,0.75
+"6","O=C(CCCCCCC(=O)Nc1cccnc1)NO","hdac_inhibitor",1,"hdac_inhibitor",0.573170731707317,0.75
+"7","C=CCNC1=C2CC(C)CC(OC)C(O)C(C)/C=C(\C)C(OC(N)=O)C(OC)/C=C/C=C(\C)C(=O)NC(=CC1=O)C2=O","HSP inhibitor",1,"HSP inhibitor",0.573170731707317,0.75
+"8","CS(=O)c1ccc(-c2nc(-c3ccc(F)cc3)c(-c3ccncc3)[nH]2)cc1","mapk_inhibitor",1,"mapk_inhibitor/angiotensin receptor antagonist",0.573170731707317,0.75
+"9","COc1cc2c(c(OC)c1OC)-c1ccc(OC)c(=O)cc1[C@@H](NC(C)=O)CC2","microtubule_inhibitor",0,"adrenergic_agonist",0.573170731707317,0.75
+"10","COc1ccc(-c2ccc3c(N4CCOCC4)nc(N4C[C@H](C)O[C@H](C)C4)nc3n2)cc1CO","mtor_inhibitor",1,"mtor_inhibitor",0.573170731707317,0.75
+"11","C=C1C(=O)O[C@H]2[C@H]1CC/C(C)=C/CC[C@@]1(C)O[C@@H]21","nfkb_inhibitor",1,"nfkb_inhibitor",0.573170731707317,0.75
+"12","Nc1ccc(C(=O)Nc2cccc(-c3nc(N4CCOCC4)c4oc5ncccc5c4n3)c2)cn1","pi3k_inhibitor",0,"vegfr_inhibitor",0.573170731707317,0.75
+"13","CN(C)CCCn1cc(C2=C(c3c[nH]c4ccccc34)C(=O)NC2=O)c2ccccc21","pkc_inhibitor",0,"serotonin_receptor_agonist",0.573170731707317,0.75
+"14","CC[C@H]1CN2CCc3cc(OC)c(OC)cc3C2C[C@@H]1CC1NCCc2cc(OC)c(OC)cc21","protein_synthesis_inhibitor",1,"protein_synthesis_inhibitor",0.573170731707317,0.75
+"15","CCCS(=O)(=O)Nc1ccc(F)c(C(=O)c2c[nH]c3ncc(-c4ccc(Cl)cc4)cc23)c1F","raf_inhibitor",1,"raf_inhibitor/dna_rna_damage/androgen_antagonist/vegfr_inhibitor/ikk_inhibitor/BCRP inhibitor/dna_methyltransferase_inhibitor/EGFR_inhibitor",0.573170731707317,0.75
+"16","CC(C)(C)c1cc(C(=O)C=Cc2ccc(C(=O)O)cc2)cc(C(C)(C)C)c1","retinoid_agonist_ligand",1,"anticancer/retinoid_agonist_ligand/ikk_inhibitor/tyrosine_kinase_inhibitor",0.573170731707317,0.75

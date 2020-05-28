@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1589195763835.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "17|12|23|2|\n47|88|54|2|\n59|14|61|2|\n87|100|129|2|\n",
+    "hash" : "0",
+    "id" : "B774D377",
+    "lastKnownWriteTime" : 1590405418,
+    "last_content_update" : 1590428434420,
+    "path" : "~/deepSNEM/visualize.R",
+    "project_path" : "visualize.R",
+    "properties" : {
+        "cursorPosition" : "56,116",
+        "scrollLine" : "34",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

@@ -1,0 +1,17 @@
+"","drugs","moa_v1","belongs","assigned","sig_accuracy","drug_accuracy"
+"1","CC12CCC3C(CCC4(O)CC(O)CCC34C=O)C1(O)CCC2C1=CC(=O)OC1","atp_synthesis_inhibitor",0,"protein synthesis stimulant",0.391304347826087,0.375
+"2","O=C1N=C(NCc2cccs2)S/C1=C\c1ccc2ncccc2c1","cdk_inhibitor",0,"estrogenic hormone/progesterone_agonist/dna_rna_damage",0.391304347826087,0.375
+"3","CC(C)[C@]12O[C@H]1[C@@H]1O[C@@]13[C@@]1(C)CCC4=C(COC4=O)C1C[C@@H]1O[C@@]13[C@@H]2O","dna_rna_damage",1,"dna_rna_damage/pi3k_inhibitor",0.391304347826087,0.375
+"4","c1ccc2c(c1)Nc1ccccc1S2","dopamine_antagonist",0,"acetylcholinesterase_inhibitor/angiotensin receptor antagonist",0.391304347826087,0.375
+"5","CN(C)C/C=C/C(=O)Nc1cc2c(Nc3ccc(F)c(Cl)c3)ncnc2cc1OC1CCOC1","EGFR_inhibitor",1,"EGFR_inhibitor/mapk_inhibitor",0.391304347826087,0.375
+"6","Nc1ccccc1NC(=O)c1ccc(CNC(=O)OCc2cccnc2)cc1","hdac_inhibitor",1,"hdac_inhibitor",0.391304347826087,0.375
+"7","COC1/C=C/C=C(\C)C(=O)NC2=CC(=O)C(NCCN(C)C)=C(CC(C)CC(OC)C(O)C(C)/C=C(\C)C1OC(N)=O)C2=O","HSP inhibitor",1,"syk_inhibitor/HSP inhibitor/glutamate_antagonist",0.391304347826087,0.375
+"8","CCc1nc(-c2cccc(C)c2)c(-c2ccnc(NC(=O)c3ccccc3)c2)s1","mapk_inhibitor",0,"local anesthetic/acetylcholine_agonist/adrenergic_receptor_antagonist",0.391304347826087,0.375
+"9","CC(=O)O[C@@]12CO[C@H]1C[C@H](O)[C@@]1(C)C(=O)[C@H](O)C3=C(C)[C@@H](OC(=O)[C@H](O)[C@@H](NC(=O)OC(C)(C)C)c4ccccc4)C[C@](O)([C@@H](OC(=O)c4ccccc4)[C@@H]21)C3(C)C","microtubule_inhibitor",0,"faah_inhibitor",0.391304347826087,0.375
+"10","COc1ccc(-c2ccc3c(N4CCOC[C@@H]4C)nc(N4CCOC[C@@H]4C)nc3n2)cc1CO","mtor_inhibitor",1,"mtor_inhibitor",0.391304347826087,0.375
+"11","C=C1C[C@]23C[C@@]1(O)CC[C@H]2[C@@]12C=C[C@H](O)[C@@](C)(C(=O)O1)[C@H]2[C@@H]3C(=O)O","nfkb_inhibitor",0,"carbonic anhydrase inhibitor",0.391304347826087,0.375
+"12","COCC1OC(=O)c2coc3c2C1(C)C1=C(C3=O)C2CCC(=O)C2(C)CC1OC(C)=O","pi3k_inhibitor",0,"mtor_inhibitor",0.391304347826087,0.375
+"13","Cn1cc(C2=C(c3cn(C4CCN(Cc5ccccn5)CC4)c4ccccc34)C(=O)NC2=O)c2ccccc21","pkc_inhibitor",0,"raf_inhibitor/adrenergic_receptor_antagonist/estrogenic hormone/dopamine_antagonist",0.391304347826087,0.375
+"14","CC[C@H]1CN2CCc3cc(OC)c(OC)cc3[C@@H]2C[C@@H]1C[C@H]1NCCc2cc(OC)c(OC)cc21","protein_synthesis_inhibitor",1,"protein_synthesis_inhibitor",0.391304347826087,0.375
+"15","Cc1ccc(NC(=O)c2cccc(C(C)(C)C#N)c2)cc1Nc1ccc2ncn(C)c(=O)c2c1","raf_inhibitor",0,"mek_inhibitor",0.391304347826087,0.375
+"16","CC1=C(/C=C/C(C)=C/C=C/C(C)=C\CO)C(C)(C)CCC1","retinoid_agonist_ligand",0,"mtor_inhibitor",0.391304347826087,0.375

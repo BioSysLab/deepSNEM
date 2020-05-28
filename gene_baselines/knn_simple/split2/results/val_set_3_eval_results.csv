@@ -1,0 +1,17 @@
+"","drugs","moa_v1","belongs","assigned","sig_accuracy","drug_accuracy"
+"1","CCCCCCCCCCCCCCCC[N+](C)(C)CCN(Cc1ccc(OC)cc1)c1ncccn1","atp_synthesis_inhibitor",0,"kinase_inhibitor",0.315789473684211,0.375
+"2","CC(C)(C)c1cnc(CSc2cnc(NC(=O)C3CCNCC3)s2)o1","cdk_inhibitor",1,"cdk_inhibitor",0.315789473684211,0.375
+"3","O=C(Nc1ccc([N+](=O)[O-])cc1Cl)c1cc(Cl)ccc1O","dna_rna_damage",0,"peptidase_inhibitor/carnitine palmitoyltransferase inhibitor",0.315789473684211,0.375
+"4","OCCN1CCN(CCCN2c3ccccc3Sc3ccc(Cl)cc32)CC1","dopamine_antagonist",0,"dna_pol_inhibitor",0.315789473684211,0.375
+"5","COC(=O)C=Cc1cc(O)ccc1O","EGFR_inhibitor",0,"faah_inhibitor",0.315789473684211,0.375
+"6","CC(=O)Nc1ccc(C(=O)Nc2ccccc2N)cc1","hdac_inhibitor",1,"hdac_inhibitor",0.315789473684211,0.375
+"7","COC1=C2C[C@@H](C)C[C@H](OC)[C@H](O)[C@@H](C)/C=C(\C)[C@H](OC(N)=O)[C@@H](OC)/C=C\C=C(/C)C(=O)NC(=CC1=O)C2=O","HSP inhibitor",1,"HSP inhibitor",0.315789473684211,0.375
+"8","COc1cc(SC)ccc1C(=O)N1CCC(Cc2ccccc2)CC1","mapk_inhibitor",0,"adrenergic_receptor_antagonist",0.315789473684211,0.375
+"9","COC(=O)Nc1nc2ccc(C(=O)c3ccccc3)cc2[nH]1","microtubule_inhibitor",1,"microtubule_inhibitor/peptidase_inhibitor",0.315789473684211,0.375
+"10","Oc1cccc(-c2nc(N3CCOCC3)c3oc4ncccc4c3n2)c1","mtor_inhibitor",1,"mtor_inhibitor",0.315789473684211,0.375
+"11","Cc1ccc(S(=O)(=O)/C=C/C#N)cc1","nfkb_inhibitor",0,"dopamine_antagonist/kinase_inhibitor/potassium_activator/ribonucleotide_reductase_inhibitor/angiotensin receptor antagonist/guanylate cyclase activator/constitutive androstane receptor (CAR) agonist/phosphodiesterase_inhibitor",0.315789473684211,0.375
+"12","O=C1NC(=O)/C(=C/c2ccc3nccc(-c4ccncc4)c3c2)S1","pi3k_inhibitor",0,"mtor_inhibitor",0.315789473684211,0.375
+"13","O=C1NC(=O)c2c1c(-c1ccccc1)cc1[nH]c3ccc(O)cc3c21","pkc_inhibitor",0,"cannabinoid receptor agonist/estrogenic hormone/bcl_inhibitor/retinoid_agonist_ligand/dopamine_antagonist",0.315789473684211,0.375
+"14","COC(=O)C[C@](O)(CCCC(C)(C)O)C(=O)O[C@@H]1C(OC)=C[C@]23CCCN2CCc2cc4c(cc2[C@H]13)OCO4","protein_synthesis_inhibitor",1,"protein_synthesis_inhibitor",0.315789473684211,0.375
+"15","Cc1ccc(NC(=O)c2cccc(N(C)C)c2)cc1NC(=O)c1ccc(O)cc1","raf_inhibitor",0,"sodium channel blocker/flt_inhibitor",0.315789473684211,0.375
+"16","O=C(O)c1ccc2cc(-c3ccc(O)c(C45CC6CC(CC(C6)C4)C5)c3)ccc2c1","retinoid_agonist_ligand",0,"cox inhibitor",0.315789473684211,0.375
