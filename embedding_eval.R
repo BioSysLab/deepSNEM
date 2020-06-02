@@ -1,4 +1,4 @@
-eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,landmark,sig_mapping, sims, output_dir, task3){
+eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,landmark,sig_mapping, sims, output_dir, task3, genes){
   # test is a dataframe where there is a column emb which is in the
   # form of the column emb of file info
   # file info, dataframe 
@@ -318,59 +318,62 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
     rownames(distances) <- names
     return(distances)
   }
-  ### duplicate gene distances
-  thresh <- c(10,15,20,25,30)
-  identifier <- unique(as.character(file_info_dups$identifier))
-  dup_gene_distances <- readRDS("data/gene_distances_val/dup_gene_distances_for_eval.rds")
-
-  # calculate random gene distances
-  sigs_random <- as.data.frame(sigs_random)
-  sigs_random <- left_join(sigs_random,sig_mapping,by = c("sigs_random"="sig_id2"))
-  dist_genes_random <- list(0)
-  genes_random <- get_cmap_signatures(sig_ids = sigs_random$sig_id,cmap_path_to_gctx = ds_path,landmark_df = landmark,landmark = TRUE)
-  for (j in 1:length(thresh)) {
-    dist2 <- distance_scores(num_table = genes_random,threshold_count = thresh[j],names = colnames(genes_random))
-    dist_genes_random[[j]] <- dist2
+  if (genes) {
+    ### duplicate gene distances
+    thresh <- c(10,15,20,25,30)
+    identifier <- unique(as.character(file_info_dups$identifier))
+    dup_gene_distances <- readRDS("data/gene_distances_val/dup_gene_distances_for_eval.rds")
+    
+    # calculate random gene distances
+    sigs_random <- as.data.frame(sigs_random)
+    sigs_random <- left_join(sigs_random,sig_mapping,by = c("sigs_random"="sig_id2"))
+    dist_genes_random <- list(0)
+    genes_random <- get_cmap_signatures(sig_ids = sigs_random$sig_id,cmap_path_to_gctx = ds_path,landmark_df = landmark,landmark = TRUE)
+    for (j in 1:length(thresh)) {
+      dist2 <- distance_scores(num_table = genes_random,threshold_count = thresh[j],names = colnames(genes_random))
+      dist_genes_random[[j]] <- dist2
+    }
+    sam <- 0
+    for (k in 1:length(dist_genes_random)) {
+      sam <- sam + dist_genes_random[[k]]
+    }
+    sam <- sam/length(dist_genes_random)
+    
+    sam[lower.tri(sam,diag = T)] <- 666
+    rownames(sam) <- as.character(sigs_random$sigs_random)
+    colnames(sam) <- as.character(sigs_random$sigs_random)
+    sam <- reshape2::melt(sam)
+    sam <- sam %>% filter(value != 666)
+    sam$value <- sam$value/2
+    
+    # write results task 2 genes
+    c <- max(c(density(sam$value)$y,density(dup_gene_distances$value)$y))
+    png(file=paste0(output_dir,"/task2/","task2_duplicate_vs_random_sig_id_genes.png"),width=7,height=6,units = "in",res=300)
+    multi2(list(dup_gene_distances$value,sam$value),xlab = "Distance", xaxs="i",yaxs="i",ylim = c(0,c+0.01))
+    title("C", adj = 0)
+    legend("topright", 
+           legend = c("genes from duplicate perts", "random genes"), 
+           col = c('black', 
+                   'red'),
+           lty = c(1,1),
+           bty = "o", 
+           pt.cex = 1.5, 
+           cex = 0.8, 
+           text.col = "black", 
+           horiz = F , 
+           inset = c(0.01, 0.01))
+    dev.off()
+    output_task2genes <- data.frame(matrix(0,nrow = 1, ncol = 6))
+    colnames(output_task2genes) <- c("mean_same","sd_same","n_same","mean_random","sd_random","n_random")
+    output_task2genes$mean_same <- mean(dup_gene_distances$value,na.rm=T)
+    output_task2genes$sd_same <- sd(dup_gene_distances$value,na.rm=T)
+    output_task2genes$n_same <- nrow(dup_gene_distances)
+    output_task2genes$mean_random <- mean(sam$value,na.rm=T)
+    output_task2genes$sd_random <- sd(sam$value,na.rm=T)
+    output_task2genes$n_random <- nrow(sam)
+    write.csv(output_task2genes,paste0(output_dir,"/task2/","task2_stats_genes.csv"))
   }
-  sam <- 0
-  for (k in 1:length(dist_genes_random)) {
-    sam <- sam + dist_genes_random[[k]]
-  }
-  sam <- sam/length(dist_genes_random)
   
-  sam[lower.tri(sam,diag = T)] <- 666
-  rownames(sam) <- as.character(sigs_random$sigs_random)
-  colnames(sam) <- as.character(sigs_random$sigs_random)
-  sam <- reshape2::melt(sam)
-  sam <- sam %>% filter(value != 666)
-  sam$value <- sam$value/2
-  
-  # write results task 2 genes
-  c <- max(c(density(sam$value)$y,density(dup_gene_distances$value)$y))
-  png(file=paste0(output_dir,"/task2/","task2_duplicate_vs_random_sig_id_genes.png"),width=7,height=6,units = "in",res=300)
-  multi2(list(dup_gene_distances$value,sam$value),xlab = "Distance", xaxs="i",yaxs="i",ylim = c(0,c+0.01))
-  title("C", adj = 0)
-  legend("topright", 
-         legend = c("genes from duplicate perts", "random genes"), 
-         col = c('black', 
-                 'red'),
-         lty = c(1,1),
-         bty = "o", 
-         pt.cex = 1.5, 
-         cex = 0.8, 
-         text.col = "black", 
-         horiz = F , 
-         inset = c(0.01, 0.01))
-  dev.off()
-  output_task2genes <- data.frame(matrix(0,nrow = 1, ncol = 6))
-  colnames(output_task2genes) <- c("mean_same","sd_same","n_same","mean_random","sd_random","n_random")
-  output_task2genes$mean_same <- mean(dup_gene_distances$value,na.rm=T)
-  output_task2genes$sd_same <- sd(dup_gene_distances$value,na.rm=T)
-  output_task2genes$n_same <- nrow(dup_gene_distances)
-  output_task2genes$mean_random <- mean(sam$value,na.rm=T)
-  output_task2genes$sd_random <- sd(sam$value,na.rm=T)
-  output_task2genes$n_random <- nrow(sam)
-  write.csv(output_task2genes,paste0(output_dir,"/task2/","task2_stats_genes.csv"))
   print("TASK 2 FINISHED")
   # Task 3 similar chemical structure similar embeddings and comparison with gene dist
   if (task3) {
@@ -519,17 +522,17 @@ sig_mapping <- readRDS("data/graph_info_df/sig_mapping.rds")
 
 test <- read.csv("embeddings/ged_distance/ged_embs512_seen_4ep.csv")
 
-test_files <- as.character(test$X)
-test_files <- as.data.frame(test_files)
-test_files <- left_join(test_files,file_info,by = c("test_files"="files_combined"))
-test_files <- test_files %>% dplyr::select(test_files,emb)
-test_files <- left_join(test_files,file_info_dups,by = c("test_files"="files_combined"))
-test_files <- test_files %>% dplyr::select(test_files,emb.x,emb.y) %>% mutate(emb = if_else(condition = is.na(emb.x),true = emb.y,false = emb.x))
-test_files <- test_files %>% dplyr::select(test_files,emb)
-test <- left_join(test_files,test,by= c("test_files"="X"))
+#test_files <- as.character(test$X)
+#test_files <- as.data.frame(test_files)
+#test_files <- left_join(test_files,file_info,by = c("test_files"="files_combined"))
+#test_files <- test_files %>% dplyr::select(test_files,emb)
+#test_files <- left_join(test_files,file_info_dups,by = c("test_files"="files_combined"))
+#test_files <- test_files %>% dplyr::select(test_files,emb.x,emb.y) %>% mutate(emb = if_else(condition = is.na(emb.x),true = emb.y,false = emb.x))
+#test_files <- test_files %>% dplyr::select(test_files,emb)
+#test <- left_join(test_files,test,by= c("test_files"="X"))
 test <- test[,-1]
-embs <- read.csv("embeddings/graph2vec/emb_clustered_norm_500.csv")
-test[,1] <- as.character(embs[,1])
+#embs <- read.csv("embeddings/graph2vec/emb_clustered_norm_500.csv")
+#test[,1] <- as.character(embs[,1])
 colnames(test)[1] <- "emb"
 #test <- test %>% mutate(emb = str_remove_all(string = emb,pattern = ".csv"))
 
@@ -542,4 +545,4 @@ sims <- readRDS("data/rdkit/rdkit_sims.rds")
 
 eval_emb(test = test, file_info = file_info ,
          distance_type = distance_type,output_dir = output_dir, file_info_dups = file_info_dups, 
-         ds_path = ds_path,landmark = landmark, sig_mapping = sig_mapping, sims = sims , task3=F)
+         ds_path = NULL,landmark = NULL, sig_mapping = sig_mapping, sims = sims , task3=F, genes = F)

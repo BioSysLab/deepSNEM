@@ -27,7 +27,7 @@ prepape_embs <- function(emb, type = "unweighted", file_info, labels, keep_one, 
 
 file_info <- readRDS("data/graph_info_df/file_info_nodups.rds")
 file_info_dups <- readRDS("data/graph_info_df/file_info_dups.rds")
-emb <- read.csv("embeddings/ged_distance_semi/ss_4ep_512_cosine.csv")
+emb <- read.csv("embeddings/ged_distance_semi/split1/semi_1epoch/val1/train/ss_1ep_512_cosine_train.csv")
 #test_files <- as.character(emb$X)
 #test_files <- as.data.frame(test_files)
 #test_files <- left_join(test_files,file_info,by = c("test_files"="files_combined"))
@@ -71,7 +71,7 @@ visualize_moa_emb <- function(emb,output_dir,moa_n,emb_size,perpl_emb,iter,init_
 }
 
 visualize_moa_emb(emb_proc,output_dir = "vis",moa_n = 10,emb_size = 512,
-              perpl_emb = 5,init_dim = 80,iter = 2000,name = "test_ave_5perpl_10moa_ged_semi_cosine_512",scale = T)
+              perpl_emb = 5,init_dim = 80,iter = 2000,name = "semi_1ep_10moa_ged_semi_cosine_512",scale = T)
 
 
 visualize_moa_genes <- function(emb,output_dir,moa_n,perpl,iter,init_dim,name,ds_path,landmark,sig_map){
