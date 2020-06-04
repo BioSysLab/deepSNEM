@@ -26,8 +26,7 @@ prepape_embs <- function(emb, type = "unweighted", file_info, labels, keep_one, 
   }
   return(emb)
 }
-
-prepare_test_embs <- function(test_embs,test_df,ave_drug,ave_sig,emb_n){
+prepare_test_embs <- function(test_embs,test_df,ave_drug,ave_sig,emb_n,keep_one){
   test_embs <- left_join(test_embs,test_df,by = "emb")
   if (ave_sig) {
     aver <- aggregate(test_embs[, 2:(emb_n+1)], list(test_embs$sig_id), mean)
@@ -35,9 +34,12 @@ prepare_test_embs <- function(test_embs,test_df,ave_drug,ave_sig,emb_n){
     test_embs <- left_join(aver,test_df2,by = c("Group.1"="sig_id"))
     colnames(test_embs)[1] <- "sig_id"
   }
+  if (keep_one) {
+    test_embs <- test_embs %>% group_by(sig_id) %>% sample_n(1) %>% ungroup()
+  }
+  test_embs <- test_embs %>% filter(!is.na(sig_id))
   return(test_embs)
 }
-
 predict_test_moa_emb <- function(test_embs,train_embs,moa_n,perpl,init_dim,iter,emb_size,output_dir,vis = F,k){
   library(tidyverse)
   library(Rtsne)
@@ -55,14 +57,13 @@ predict_test_moa_emb <- function(test_embs,train_embs,moa_n,perpl,init_dim,iter,
   }
   
   train_embs <- train_embs %>% filter(!is.na(moa_v1))
-  moa <- train_embs %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
-  moa_vis <- moa$moa_v1[1:moa_n]
-  train_embs <- train_embs[which(as.character(train_embs$moa_v1) %in% moa_vis),]
-  
-  train_embs$name <- ""
-  test_embs <- test_embs %>% mutate(name = paste0("test_",moa_v1))
-  
   if (vis) {
+    moa <- train_embs %>% group_by(moa_v1) %>% summarise(count = n()) %>% arrange(desc(count)) %>% mutate(cs = cumsum(count))
+    moa_vis <- moa$moa_v1[1:moa_n]
+    train_embs <- train_embs[which(as.character(train_embs$moa_v1) %in% moa_vis),]
+    
+    train_embs$name <- ""
+    test_embs <- test_embs %>% mutate(name = paste0("test_",moa_v1))
     tsne_all <- Rtsne(scale(rbind(train_embs[,2:(emb_size+1)],test_embs[,2:(emb_size+1)])), 
                       dims = 2, perplexity=perpl, 
                       verbose=TRUE, max_iter = iter,initial_dims = init_dim,check_duplicates = F)
@@ -77,15 +78,52 @@ predict_test_moa_emb <- function(test_embs,train_embs,moa_n,perpl,init_dim,iter,
     print(addSmallLegend(gtsne))
     dev.off()
   }
+  
   set.seed(123)
-  model1<- knn(train=train_embs[,2:513], test=test_embs[,2:513], cl=as.factor(train_embs$moa_v1), k=k,use.all = T)
+  model1<- knn(train=train_embs[,2:(emb_size+1)], test=test_embs[,2:(emb_size+1)], cl=as.factor(train_embs$moa_v1), k=k,use.all = T)
   test_embs$predicted <- as.character(model1)
   results <- test_embs %>% dplyr::select(test_rdkit,sig_id,moa_v1,predicted,cell_id,pert_iname) %>% unique()
   return(results)
 }
-
+knn_dist_predictions <- function(train_embs,test_embs,train_labels,k,emb_length){
+  cosine_dist <- function(a,b){
+    a <- as.vector(as.matrix(a))
+    b <- as.vector(as.matrix(b))
+    cos_dist <- 1 - (a%*%b)/(sqrt(a%*%a)*sqrt(b%*%b))
+    return(cos_dist)
+  }
+  get_k_nearest <- function(a,k,col_names,train_embs){
+    a <- as.vector(as.matrix(a))
+    names(a) <- col_names
+    a <- sort(a,decreasing = F)
+    neighbors <- names(a)[1:k]
+    moas <- as.character(train_embs$moa_v1[which(train_embs$sig_id %in% neighbors)])
+    un_moas <- unique(moas)
+    freq <- NULL
+    for (j in 1:length(un_moas)) {
+      freq[j] <- length(which(moas %in% un_moas[j]))/length(moas)
+    }
+    names(freq) <- un_moas
+    assigned_moa <- names(freq)[which(freq==max(freq))]
+    return(assigned_moa)
+  }
+  d1 <- apply(test_embs[,2:(emb_length+1)], 1, function(x) apply(train_embs[,2:(emb_length+1)], 1, function(y) cosine_dist(x,y)))
+  d1 <- t(d1)
+  rownames(d1) <- as.character(test_embs$sig_id)
+  colnames(d1) <- as.character(train_embs$sig_id)
+  moas <- apply(d1,1,get_k_nearest,k,colnames(d1),train_embs)
+  results <- test_embs %>% dplyr::select(test_rdkit,sig_id,moa_v1,cell_id,pert_iname) %>% unique()
+  results$predicted <- moas
+  return(results)
+}
 evaluate_predictions <- function(predictions) {
-  overall_acc <- length(which(predictions$predicted==predictions$moa_v1))/nrow(predictions)
+  overall_acc <- 0
+  for (i in 1:nrow(predictions)) {
+    if (any(predictions$predicted[i]==predictions$moa_v1[i])) {
+      overall_acc <- overall_acc+1
+    }
+  }
+  overall_acc <- overall_acc/nrow(predictions)
   drugs <- unique(as.character(predictions$test_rdkit))
   assigned_moa <- list(0)
   for (i in 1:length(drugs)) {
@@ -110,7 +148,28 @@ evaluate_predictions <- function(predictions) {
   }
   return(list(overall_acc,test_drugs,length(which(test_drugs$belongs==1))/length(drugs),assigned_moa))
 }
-
+investigate_k <- function(k,test_embs,train_embs,emb_length,knn_type){
+  results <- matrix(666,nrow = length(k),ncol = 3)
+  for (i in 1:length(k)) {
+    if (knn_type == "normal") {
+      predictions <- predict_test_moa_emb(test_embs = test_embs,train_embs = train_embs,
+                                          moa_n = 10,perpl = 5,init_dim = 80,iter = 2000,
+                                          emb_size = emb_length,output_dir = "",vis = F,
+                                          k = k[i])
+    }
+    if (knn_type == "modified") {
+      predictions <- knn_dist_predictions(train_embs = train_embs,test_embs = test_embs,
+                                          train_labels = train_embs$moa_v1,k = k[i],emb_length = emb_length)
+    }
+    eval <- evaluate_predictions(predictions = predictions)
+    results[i,1] <- k[i]
+    results[i,2] <- eval[[1]]
+    results[i,3] <- eval[[3]]
+  }
+  results <- as.data.frame(results)
+  colnames(results) <- c("k","sig_acc","drug_acc")
+  return(results)
+}
 write_results <- function(eval,output_dir,test_name){
   sig_accuracy <- eval[[1]]
   drug_accuracy <- eval[[3]]
@@ -128,7 +187,7 @@ write_results <- function(eval,output_dir,test_name){
 
 file_info <- readRDS("data/graph_info_df/file_info_nodups.rds")
 file_info_dups <- readRDS("data/graph_info_df/file_info_dups.rds")
-emb <- read.csv("embeddings/ged_distance_semi/split2/ss_1ep_512_cosine_train_split2.csv")
+emb <- read.csv("embeddings/ged_distance_semi/split3/ss_1ep_512_cosine_train_split3_new_gen.csv")
 emb <- emb[,-1]
 colnames(emb)[1] <- "emb"
 labels <- readRDS("data/cmap/labels/labels_first_pass.rds")
@@ -136,23 +195,58 @@ emb_proc <- prepape_embs(emb = emb,file_info = file_info,labels = labels,keep_on
 
 
 
-test_df <- readRDS("data/graph_additional/pairs/splits/split2/test_set.rds")
+test_df <- readRDS("data/graph_additional/pairs/splits/split3/val_set_1.rds")
 colnames(test_df) <- c("test_rdkit","sig_id","files_combined","pert_iname","cell_id","emb","moa_v1")
-test_embs <- read.csv("embeddings/ged_distance_semi/split2/1epoch/ged_ss_1ep_test_set_split2.csv")
+
+allpairs <- readRDS("data/graph_additional/pairs/splits/split3/allpairs3.rds")
+graphs <- unique(c(as.character(allpairs$graph.x),as.character(allpairs$graph.y)))
+test_df <- test_df[which(test_df$files_combined %in% graphs),]
+
+test_embs <- read.csv("embeddings/ged_distance_semi/split3/allgraphs/ged_ss_3ep_val_set_1_split3_new_gen.csv")
 test_embs <- test_embs[,-1]
 colnames(test_embs)[1] <- "emb"
 
 train_embs <- emb_proc
-test_embs <- prepare_test_embs(test_embs = test_embs,test_df = test_df,ave_drug = F,ave_sig = T,emb_n=512)
+test_embs <- prepare_test_embs(test_embs = test_embs,test_df = test_df,ave_drug = F,ave_sig = T,emb_n=512,keep_one = F)
+train_embs <- train_embs[-which(train_embs$sig_id %in% test_embs$sig_id),]
+train_embs <- train_embs %>% filter(moa_v1 != "")
 
+k <- seq(1,200,5)
+
+library(doFuture)
+
+# parallel set number of workers
+registerDoFuture()
+plan(multiprocess,workers = 12)
+results_modified <- NULL
+results_modified <- foreach(k_n = k) %dopar% {
+  investigate_k(k = k_n,test_embs = test_embs,train_embs = train_embs,emb_length = 512,knn_type = "modified")
+}
+results_df <- results_modified[[1]]
+for (i in 2:length(results_modified)) {
+  results_df <- rbind(results_df,results_modified[[i]])
+}
+
+results_normal <- NULL
+results_normal <- foreach(k_n = k) %dopar% {
+  investigate_k(k = k_n,test_embs = test_embs,train_embs = train_embs,emb_length = 512,knn_type = "normal")
+}
+results_df_normal <- results_normal[[1]]
+for (i in 2:length(results_normal)) {
+  results_df_normal <- rbind(results_df_normal,results_normal[[i]])
+}
+
+
+predictions <- knn_dist_predictions(train_embs = train_embs,test_embs = test_embs,train_labels = train_embs$moa_v1,
+                                    emb_length = 512,k = 197)
 predictions <- predict_test_moa_emb(test_embs = test_embs,train_embs = train_embs,
                                 moa_n = 10,perpl = 5,init_dim = 80,iter = 2000,
                                 emb_size = 512,output_dir = "",vis = F,
-                                k = 1)
-
-
+                                k = 95)
 eval_emb <- evaluate_predictions(predictions = predictions)
 
-write_results(eval_emb,output_dir = "embeddings/ged_distance_semi/split2/1epoch/results",test_name = "test_set")
+write_results(eval_emb,output_dir = "embeddings/ged_distance_semi/split2/new_generator/results",test_name = "val_set_1")
+
+
 
 

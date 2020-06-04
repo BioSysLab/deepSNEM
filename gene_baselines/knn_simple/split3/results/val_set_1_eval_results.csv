@@ -1,0 +1,17 @@
+"","drugs","moa_v1","belongs","assigned","sig_accuracy","drug_accuracy"
+"1","CCCCCCCCCCCCCCCC[N+](C)(C)CCN(Cc1ccc(OC)cc1)c1ncccn1","atp_synthesis_inhibitor",0,"opioid_receptor_antagonist",0.521008403361345,0.4375
+"2","CC(C)(C)c1cnc(CSc2cnc(NC(=O)C3CCNCC3)s2)o1","cdk_inhibitor",1,"cdk_inhibitor",0.521008403361345,0.4375
+"3","COc1cccc2c1C(=O)c1c(O)c3c(c(O)c1C2=O)CC(O)(C(C)=O)CC3OC1CC(N)C(O)C(C)O1","dna_rna_damage",1,"estrogenic hormone/dna_rna_damage/ribonucleotide_reductase_inhibitor",0.521008403361345,0.4375
+"4","OCCOCCN1CCN(C2=Nc3ccccc3Sc3ccccc32)CC1","dopamine_antagonist",0,"local anesthetic/potassium channel blocker",0.521008403361345,0.4375
+"5","CCOc1cc2ncc(C#N)c(Nc3ccc(OCc4ccccn4)c(Cl)c3)c2cc1NC(=O)/C=C/CN(C)C","EGFR_inhibitor",0,"raf_inhibitor",0.521008403361345,0.4375
+"6","O=C(CCCCCCC(=O)Nc1ccccc1)NO","hdac_inhibitor",1,"hdac_inhibitor",0.521008403361345,0.4375
+"7","COC1=C2CC(C)CC(OC)C(O)C(C)/C=C(\C)C(OC(N)=O)C(OC)/C=C/C=C(\C)C(=O)NC(=CC1=O)C2=O","HSP inhibitor",1,"HSP inhibitor",0.521008403361345,0.4375
+"8","COc1cc(N2CCN(C)CC2)ccc1Nc1ncc2c(n1)N(C)c1ccccc1C(=O)N2C","mapk_inhibitor",1,"mapk_inhibitor",0.521008403361345,0.4375
+"9","COc1ccc2[nH]c(C(=O)c3ccccc3)cc2c1","microtubule_inhibitor",1,"microtubule_inhibitor",0.521008403361345,0.4375
+"10","COC(=O)Nc1ccc(-c2nc(N3CCOCC3)c3cnn(C4CCN(C(=O)OC)CC4)c3n2)cc1","mtor_inhibitor",1,"dihydrofolate reductase inhibitor/pi3k_inhibitor/mtor_inhibitor",0.521008403361345,0.4375
+"11","C=C1C(=O)O[C@H]2[C@H]1CC/C(C)=C/CC[C@@]1(C)O[C@H]21","nfkb_inhibitor",0,"gamma secretase inhibitor/adrenergic_receptor_antagonist/guanylate cyclase activator/cox inhibitor",0.521008403361345,0.4375
+"12","Cc1cc([C@@H](C)Nc2ccccc2C(=O)O)c2nc(N3CCOCC3)cc(=O)n2c1","pi3k_inhibitor",0,"sodium_potassium_chloride_transporter_inhibitor/mtor_inhibitor/EGFR_inhibitor/dna_methyltransferase_inhibitor",0.521008403361345,0.4375
+"13","Cn1cc(C2=C(c3cn(C4CCN(Cc5ccccn5)CC4)c4ccccc34)C(=O)NC2=O)c2ccccc21","pkc_inhibitor",0,"raf_inhibitor/adrenergic_receptor_antagonist/hdac_inhibitor/mapk_inhibitor",0.521008403361345,0.4375
+"14","CC1CCCC=CC2CC(O)CC2C(O)C=CC(=O)O1","protein_synthesis_inhibitor",0,"EGFR_inhibitor",0.521008403361345,0.4375
+"15","Cc1ccc(NC(=O)c2cccc(C(C)(C)C#N)c2)cc1Nc1ccc2ncn(C)c(=O)c2c1","raf_inhibitor",0,"mek_inhibitor",0.521008403361345,0.4375
+"16","O=C(O)c1ccc(-c2ccc3cc(C45CC6CC(CC(C6)C4)C5)c(O)cc3c2)cc1","retinoid_agonist_ligand",0,"carnitine palmitoyltransferase inhibitor",0.521008403361345,0.4375

@@ -1,0 +1,17 @@
+"","drugs","moa_v1","belongs","assigned","sig_accuracy","drug_accuracy"
+"1","C[C@]12CC[C@H](O)C[C@H]1CC[C@@H]1[C@@H]2CC[C@]2(C)[C@@H](C3=CC(=O)OC3)CC[C@]12O","atp_synthesis_inhibitor",1,"atp_synthesis_inhibitor",0.393162393162393,0.5625
+"2","CN1CC[C@H](c2c(O)cc(O)c3c(=O)cc(-c4ccccc4Cl)oc23)[C@H](O)C1","cdk_inhibitor",1,"cdk_inhibitor",0.393162393162393,0.5625
+"3","CCc1c2c(nc3ccc(O)cc13)-c1cc3c(c(=O)n1C2)COC(=O)C3(O)CC","dna_rna_damage",1,"dna_rna_damage",0.393162393162393,0.5625
+"4","CN(C)CCCN1c2ccccc2Sc2ccccc21","dopamine_antagonist",1,"mapk_inhibitor/dopamine_antagonist",0.393162393162393,0.5625
+"5","COc1cc2ncnc(Nc3cccc(Cl)c3)c2cc1OC","EGFR_inhibitor",0,"raf_inhibitor/NGF binding inhibitor/farnesyltransferase inhibitor/protein_synthesis_inhibitor/glucokinase activator/BCRP inhibitor/tyrosine_kinase_inhibitor/serotonin_receptor_antagonist",0.393162393162393,0.5625
+"6","CC(/C=C/C(=O)NO)=C\[C@@H](C)C(=O)c1ccc(N(C)C)cc1","hdac_inhibitor",1,"hdac_inhibitor",0.393162393162393,0.5625
+"7","COc1c(C)cnc(Cn2cnc3c(Cl)nc(N)nc32)c1C","HSP inhibitor",1,"HSP inhibitor",0.393162393162393,0.5625
+"8","O=c1ncn2nc(Sc3ccc(F)cc3F)ccc2c1-c1c(Cl)cccc1Cl","mapk_inhibitor",0,"EGFR_inhibitor",0.393162393162393,0.5625
+"9","CC[C@]1(O)C[C@H]2CN(CCc3c([nH]c4ccccc34)[C@@](C(=O)OC)(c3cc4c(cc3OC)N(C=O)[C@H]3[C@@](O)(C(=O)OC)[C@H](OC(C)=O)[C@@]5(CC)C=CCN6CC[C@]43[C@@H]65)C2)C1","microtubule_inhibitor",1,"microtubule_inhibitor",0.393162393162393,0.5625
+"10","Nc1ccc(-c2ccc3ncc4ccc(=O)n(-c5cccc(C(F)(F)F)c5)c4c3c2)cn1","mtor_inhibitor",1,"mtor_inhibitor",0.393162393162393,0.5625
+"11","C=C1C[C@]23C[C@@]1(O)CC[C@H]2[C@@]12C=C[C@H](O)[C@@](C)(C(=O)O1)[C@H]2[C@@H]3C(=O)O","nfkb_inhibitor",0,"carbonic anhydrase inhibitor",0.393162393162393,0.5625
+"12","Cc1ccc([N+](=O)[O-])cc1S(=O)(=O)N(C)/N=C/c1cnc2ccc(Br)cn12","pi3k_inhibitor",0,"PARP inhibitor",0.393162393162393,0.5625
+"13","CN(C)CCCn1cc(C2=C(c3c[nH]c4ccccc34)C(=O)NC2=O)c2ccccc21","pkc_inhibitor",0,"acetylcholinesterase_inhibitor/serotonin_receptor_agonist/acetylcholine_agonist/glutamate_antagonist/lanosterol demethylase inhibitor|sterol demethylase inhibitor",0.393162393162393,0.5625
+"14","CC[C@H]1CN2CCc3cc(OC)c(OC)cc3[C@@H]2C[C@@H]1C[C@H]1NCCc2cc(OC)c(OC)cc21","protein_synthesis_inhibitor",1,"protein_synthesis_inhibitor",0.393162393162393,0.5625
+"15","Cc1ccc(NC(=O)c2cccc(N(C)C)c2)cc1NC(=O)c1ccc(O)cc1","raf_inhibitor",0,"sodium channel blocker/estrogenic hormone",0.393162393162393,0.5625
+"16","CC1=C(/C=C/C(C)=C/C=C/C(C)=C\C(=O)O)C(C)(C)CCC1","retinoid_agonist_ligand",0,"ribonucleotide_reductase_inhibitor",0.393162393162393,0.5625

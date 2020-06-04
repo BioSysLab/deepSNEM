@@ -1,6 +1,13 @@
 library(tidyverse)
 
-allpairs <- readRDS("data/graph_additional/pairs/allpairs.rds")
+allpairs <- readRDS("data/graph_additional/pairs/splits/split3/allpairs3.rds")
+length(which(allpairs$sig_id.x==allpairs$sig_id.y))
+length(which(allpairs$label==1))
+allpairs <- allpairs %>% filter(sig_id.x != sig_id.y)
+allpairs <- allpairs %>% filter(moa_v1.x != "") %>% filter(moa_v1.y != "") %>% filter(!is.na(moa_v1.x)) %>% filter(!is.na(moa_v1.y))
+length(unique(c(allpairs$graph.x,allpairs$graph.y)))
+length(unique(c(allpairs$sig_id.x,allpairs$sig_id.y)))
+test <- allpairs %>% group_by(sig_id.x,sig_id.y) %>% summarise(count = n())
 
 # read file info
 file_info <- readRDS("data/graph_info_df/file_info_nodups.rds")
@@ -17,7 +24,7 @@ labels <- readRDS("data/cmap/labels/labels_first_pass.rds")
 
 sigs <- left_join(sigs,labels,by=c("rdkit"="rdkit_graph"))
 # remove the sigs with no label
-sigs <- sigs %>% filter(!is.na(moa_v1))
+sigs <- sigs %>% filter(!is.na(moa_v1)) %>% filter(moa_v1 != "")
 # remove from the splitting process the drugs with multiple moas
 sigs <- sigs %>% group_by(rdkit) %>% mutate(duplicate_moa = n_distinct(moa_v1)) %>% ungroup()
 sigs <- sigs %>% filter(duplicate_moa==1)
@@ -53,7 +60,8 @@ get_test_drugs <- function(n_split,sigs,min_moa){
 
 
 test_splits <- get_test_drugs(5,sigs,25)
-#test_splits <- readRDS("data/graph_additional/pairs/splits/split2/test_splits.rds")
+test_splits <- readRDS("data/graph_additional/pairs/splits/split3/test_splits.rds")
+saveRDS(test_splits,"data/graph_additional/pairs/splits/split3/test_splits.rds")
 evaluate_gene_perf_test_splits <- function(test_splits,sigs,ds_path,landmark,sig_mapping,k){
   library(class)
   get_cmap_signatures <- function(cmap_path_to_gctx, sig_ids, landmark = TRUE, landmark_df = NULL) {
@@ -167,34 +175,35 @@ landmark <- read_tsv(file = "data/cmap/util_files/cmap_landmark_genes.txt")
 baseline <- evaluate_gene_perf_test_splits(test_splits = test_splits,sigs = sigs,
                                            ds_path = ds_path,landmark = landmark,sig_mapping = sig_mapping,k = 3)
 
-write_results(eval = baseline[[5]],output_dir = "gene_baselines/knn_simple/split2/results",test_name = "val_set_5")
+write_results(eval = baseline[[1]],output_dir = "gene_baselines/knn_simple/split3/results",test_name = "val_set_1")
+write_results(eval = baseline[[2]],output_dir = "gene_baselines/knn_simple/split3/results",test_name = "test_set")
 
-
-test_sigs <- test_splits[[4]]
+test_sigs <- test_splits[[2]]
 test_embs <- left_join(test_sigs,graphs,by=c("sig_id"="sig_id"))
 test_embs <- test_embs %>% dplyr::select(rdkit.x,sig_id,graphs,pert_iname.x,cell_id.x,emb,moa_v1)
-saveRDS(test_embs,"data/graph_additional/pairs/splits/split2/test_set.rds")
-write.csv(test_embs,"data/graph_additional/pairs/splits/split2/test_set.csv")
-test_set_number <- 4
+saveRDS(test_embs,"data/graph_additional/pairs/splits/split3/test_set.rds")
+write.csv(test_embs,"data/graph_additional/pairs/splits/split3/test_set.csv")
+test_set_number <- 2
 for (i in 1:(length(test_splits))) {
   if (i != test_set_number) {
-    test_sigs <- test_splits[[i]]
+    test_sigs <- test_splits[[1]]
     test_embs <- left_join(test_sigs,graphs,by=c("sig_id"="sig_id"))
     test_embs <- test_embs %>% dplyr::select(rdkit.x,sig_id,graphs,pert_iname.x,cell_id.x,emb,moa_v1)
-    saveRDS(test_embs,paste0("data/graph_additional/pairs/splits/split2/val_set_",i,".rds"))
-    write.csv(test_embs,paste0("data/graph_additional/pairs/splits//split2/val_set_",i,".csv"))
+    saveRDS(test_embs,paste0("data/graph_additional/pairs/splits/split3/val_set_",i,".rds"))
+    write.csv(test_embs,paste0("data/graph_additional/pairs/splits//split3/val_set_",i,".csv"))
   }
 }
 
 # reset all pairs labels
 
-allpairs <- allpairs %>% dplyr::select(-label,-label1,-label2,-label3,-label4,-label5)
+allpairs <- allpairs %>% dplyr::select(-label,-label1,-label2,-label3,-label4)
 allpairs$label <- 0
 allpairs$label[allpairs$moa_v1.x==allpairs$moa_v1.y] <- 1
 length(which(allpairs$label==1))
-allpairs$label[allpairs$identifier.x==allpairs$identifier.y] <- 1
+#allpairs$label[allpairs$identifier.x==allpairs$identifier.y] <- 1
 length(which(allpairs$label==1))
-test_id <- unique(c(which(allpairs$rdkit.x %in% test_sigs$rdkit),which(allpairs$rdkit.y %in% test_sigs$rdkit)))
+test_id <- unique(c(which(as.character(allpairs$sig_id.x) %in% test_sigs$sig_id),
+                    which(as.character(allpairs$sig_id.y) %in% test_sigs$sig_id)))
 
 #set labels of test all to 0
 allpairs$label[test_id] <- 0
@@ -211,7 +220,8 @@ val_3 <- test_splits[[3]]
 val_4 <- test_splits[[5]]
 #val_5 <- test_splits[[5]]
 
-val_id_1 <- unique(c(which(allpairs$rdkit.x %in% val_1$rdkit),which(allpairs$rdkit.y %in% val_1$rdkit)))
+val_id_1 <- unique(c(which(as.character(allpairs$sig_id.x) %in% val_1$sig_id),
+                     which(as.character(allpairs$sig_id.y) %in% val_1$sig_id)))
 val_id_2 <- unique(c(which(allpairs$rdkit.x %in% val_2$rdkit),which(allpairs$rdkit.y %in% val_2$rdkit)))
 val_id_3 <- unique(c(which(allpairs$rdkit.x %in% val_3$rdkit),which(allpairs$rdkit.y %in% val_3$rdkit)))
 val_id_4 <- unique(c(which(allpairs$rdkit.x %in% val_4$rdkit),which(allpairs$rdkit.y %in% val_4$rdkit)))
@@ -223,7 +233,26 @@ allpairs$label3[val_id_3] <- 0
 allpairs$label4[val_id_4] <- 0
 #allpairs$label5[val_id_5] <- 0
 
-saveRDS(allpairs,"data/graph_additional/pairs/splits/split2/allpairs2.rds")
-write.csv(allpairs,"data/graph_additional/pairs/splits/split2/allpairs2.csv")
+saveRDS(allpairs3,"data/graph_additional/pairs/splits/split3/allpairs3.rds")
+write.csv(allpairs3,"data/graph_additional/pairs/splits/split3/allpairs3.csv")
 
-saveRDS(test_splits,"data/graph_additional/pairs/splits/split2/test_splits.rds")
+#saveRDS(test_splits,"data/graph_additional/pairs/splits/split2/test_splits.rds")
+
+labeled <- allpairs %>% filter(label1 == 1)
+length(which(labeled$sig_id.x %in% test_splits[[1]]$sig_id))
+
+pairs_rem <- anti_join(allpairs2,allpairs)
+pairs_rem <- pairs_rem %>% dplyr::select(-label,-label1,-label2,-label3,-label4)
+pairs_rem$label <- 0
+pairs_rem$label1 <- 0 
+
+pairs_rem2 <- pairs_rem %>% filter(!is.na(identifier.x) & !is.na(identifier.y))
+pairs_rem <- anti_join(pairs_rem,pairs_rem2)
+pairs_rem2$label[pairs_rem2$identifier.x==pairs_rem2$identifier.y] <- 1
+pairs_rem2$label1 <- pairs_rem2$label
+
+labeled_rem2 <- pairs_rem2 %>% filter(label==1)
+
+pairs_rem <- rbind(pairs_rem,pairs_rem2)
+
+allpairs3 <- rbind(allpairs3,pairs_rem)
