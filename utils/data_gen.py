@@ -2,7 +2,7 @@ from __future__ import absolute_import, division
 import torch
 from torch.functional import F
 from torch_geometric.data import Dataset
-from torch_geometric.utils import from_networkx
+from torch_geometric.utils import from_networkx, degree
 import pandas as pd
 import numpy as np
 import pickle
@@ -10,6 +10,10 @@ import networkx as nx
 
 from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler, Normalizer, RobustScaler, StandardScaler
 from sklearn.model_selection import train_test_split
+
+def to_categorical(y, num_classes):
+    """ 1-hot encodes a tensor """
+    return torch.eye(num_classes, dtype=torch.long)[y]
 
 def wcsv2graph(fname, prot_dict, normalize=False):
     """
@@ -46,6 +50,43 @@ def wcsv2graph(fname, prot_dict, normalize=False):
     
     return data
 
+def ucsv2graph(fname, global_dict, normalize=False):
+    """
+    Unweighted Graph Creator
+    """
+    sample = pd.read_csv('../snac_data/' + fname)
+    
+    G = nx.from_pandas_edgelist(sample, source='node1', target='node2', 
+                            edge_attr=['sign'], create_using=nx.DiGraph())
+
+    n1a1 = sample[['node1','activity1']]
+    n1a1.columns = ['node','act']
+
+    n2a2 = sample[['node2','activity2']]
+    n2a2.columns = ['node','act']
+    na = pd.concat([n1a1,n2a2])
+    na = na.drop_duplicates('node')
+    na = na.set_index('node')
+    na['acts'] = na[['act']].apply(lambda x: np.hstack(x), axis=1)
+    na = na.drop(['act'], axis=1)['acts'].to_dict()
+    
+    nx.set_node_attributes(G, global_dict,'global_idx')
+    nx.set_node_attributes(G, na, 'acts')
+    
+    data = from_networkx(G)
+    
+    deg = degree(data.edge_index.reshape(-1).sort()[0]).long()
+    data.acts[data.acts < 0] = 0
+    data.acts = to_categorical(data.acts, 2).reshape(-1,2).long()
+    data.degree = deg.reshape(-1,1).long()
+    
+    data.sign[data.sign < 0] = 0
+    data.sign = to_categorical(data.sign, 2).reshape(-1,2).float()
+    
+    #data.ad = torch.cat([data.acts, data.degree], axis=-1)
+    
+    return data
+
 def csv2graph(fname, prot_dict):
     
     df = pd.read_csv('../../snac_data/' + fname)
@@ -61,65 +102,40 @@ def csv2graph(fname, prot_dict):
     
     return data
 
-def load_prot_dict():
-    prot_path = '../data/lc_embeddings_raw.pkl'
+def load_prot_embs(size, norm=False):
+    prot_path = 'data/prot_embeddings/linear_corex_embeddings/lc_seqveq_embedding_dicts/lc_seq_embeddings_dict_{}.pkl'.format(size)
     prot_dict = {}
+    global_dict = {}
+
+    unique_prots = 'data/prot_embeddings/new_features/proteins.csv'
+    unique_df = pd.read_csv(unique_prots)
+
+    for idx, prot in enumerate(unique_df.proteins.to_numpy()):
+        global_dict[prot] = idx
+
     with open(prot_path, 'rb') as f:
         prot_dict = pickle.load(f)
-        
-    prot_dict['Perturbation'] = np.zeros((384,))
-    prot_dict['IKBKAP'] = np.zeros((384,))
-    prot_dict['WHSC1'] = np.zeros((384,))
-    prot_dict['ADRBK1'] = np.zeros((384,))
-    prot_dict['FIGF'] = np.zeros((384,))
-    prot_dict['FAM175A'] = np.zeros((384,))
-    prot_dict['PARK2'] = np.zeros((384,))
-    prot_dict['NKX3~1'] = np.zeros((384,))
-    prot_dict['ERBB2IP'] = np.zeros((384,))
 
-    return prot_dict
-
-def load_go_emb_prot_dict(path_to_dict):
-    prot_dict = {}
-    with open(path_to_dict, 'rb') as f:
-        prot_dict = pickle.load(f)
+    prot_dict['NKX3~1'] = prot_dict.pop('NKX3-1') # due to key mismatch
+    prot_embs = np.array([prot_dict[key] for key in global_dict.keys()])
     
-    return prot_dict
-
-def train_val_paths(train_size, val_ratio, samples_csv, path_to_files=None):
-    path_to_files = '../../snac_data/file_info.csv'
-
-    assert path_to_files is not None
+    if norm and size != 1024:
+        norm = Normalizer()
+        prot_embs = norm.fit_transform(prot_embs)
     
-    finfo = pd.read_csv(path_to_files)
-
-    samples = '../data/samples_all.csv'
-    samples = pd.read_csv(samples)
-    samples = samples.path_list.to_numpy()
-    samples = set(samples)
-    non_samples = set(finfo.files_combined).difference(samples)
-
-    fnames = np.random.choice(list(samples), train_size)
-    X, val = train_test_split(fnames, test_size=val_ratio)
-
-    return X, val, finfo, np.array(list(samples)) 
+    return prot_embs, global_dict
 
 class SNDatasetAuto(Dataset):
-    def __init__(self, fnames, prot_dict, transforms=None):
+    def __init__(self, fnames, global_dict):
         super(SNDatasetAuto, self).__init__()
         self.fnames = fnames
-        self.pd = prot_dict
-        self.transforms = transforms
+        self.gd = global_dict
         
     def len(self):
         return len(self.fnames)
         
     def get(self, idx):
-        
-        data = csv2graph(self.fnames[idx], self.pd)
-        data.train_mask = data.val_mask = data.test_mask = data.y = None
-        
-        return data
+        return ucsv2graph(self.fnames[idx], self.gd)
     
 class W_SNDataset(Dataset):
     def __init__(self, fnames, prot_dict, norm=False, transform=None):
