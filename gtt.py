@@ -107,10 +107,6 @@ for epoch in range(EPOCHS):
     train_data_iterator = tqdm(train_loader,leave=True,unit='batch',postfix={'Epoch': epoch+1,'mse': '%.4f' % 0.0,})
     train(epoch) 
 
-<<<<<<< master
 torch.save(autoenc.state_dict(), f'../gt_{args.emb_dim}_tl_{args.n_layers}_leaky_relu.pt')
-=======
-torch.save(autoenc.state_dict(), f'../gt_{args.emb_dim}_tl_{args.n_layers}_relu.pt')
->>>>>>> various changes and fixes
 
 # Save the embeddings
