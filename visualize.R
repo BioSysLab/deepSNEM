@@ -27,7 +27,7 @@ prepape_embs <- function(emb, type = "unweighted", file_info, labels, keep_one, 
 
 file_info <- readRDS("data/graph_info_df/file_info_nodups.rds")
 file_info_dups <- readRDS("data/graph_info_df/file_info_dups.rds")
-emb <- read.csv("embeddings/ged_distance_semi/split1/semi_1epoch/val1/train/ss_1ep_512_cosine_train.csv")
+emb <- read.csv("embeddings/autoencoder_graph/gt_1024_tl_1_leaky_relu_sum.csv")
 #test_files <- as.character(emb$X)
 #test_files <- as.data.frame(test_files)
 #test_files <- left_join(test_files,file_info,by = c("test_files"="files_combined"))
@@ -70,8 +70,8 @@ visualize_moa_emb <- function(emb,output_dir,moa_n,emb_size,perpl_emb,iter,init_
   dev.off()
 }
 
-visualize_moa_emb(emb_proc,output_dir = "vis",moa_n = 10,emb_size = 512,
-              perpl_emb = 5,init_dim = 80,iter = 2000,name = "semi_1ep_10moa_ged_semi_cosine_512",scale = T)
+visualize_moa_emb(emb_proc,output_dir = "vis",moa_n = 10,emb_size = 1024,
+              perpl_emb = 5,init_dim = 80,iter = 2000,name = "vis_gt_1024_tl_1_leaky_relu_sum", scale = F)
 
 
 visualize_moa_genes <- function(emb,output_dir,moa_n,perpl,iter,init_dim,name,ds_path,landmark,sig_map){
@@ -148,8 +148,8 @@ ds_path <- "C:/Users/user/Documents/phd/GSE92742_Broad_LINCS_Level5_COMPZ.MODZ_n
 landmark <- read_tsv(file = "data/cmap/util_files/cmap_landmark_genes.txt")
 
 visualize_moa_genes(emb_proc,output_dir = "vis",moa_n = 10,
-                  perpl = 15,init_dim = 80,iter = 1000,name = "test_genes_15perpl_1000_iter_10moa",
-                  ds_path = ds_path, landmark = landmark,sig_map = sig_mapping)
+                  perpl = 15,init_dim = 80,iter = 1000,name = "test_transformer_256_tl1_leaky_relu_mean",
+                  ds_path = NULL, landmark = NULL,sig_map = sig_mapping)
 
 
 

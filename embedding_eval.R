@@ -506,7 +506,7 @@ file_info_dups <- readRDS("data/graph_info_df/file_info_dups.rds")
 ###
 distance_type = "cosine"
 ###
-output_dir <- "validation/validation_ged/ged_512_4ep"
+output_dir <- "validation/validation_transformer/gt_1024_tl_1_leaky_relu_sum"
 
 
 
@@ -520,7 +520,7 @@ sig_mapping <- readRDS("data/graph_info_df/sig_mapping.rds")
 
 ### create test embedding df
 
-test <- read.csv("embeddings/ged_distance/ged_embs512_seen_4ep.csv")
+test <- read.csv("embeddings/autoencoder_graph/gt_1024_tl_1_leaky_relu_sum.csv")
 
 #test_files <- as.character(test$X)
 #test_files <- as.data.frame(test_files)

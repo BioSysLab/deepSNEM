@@ -120,7 +120,11 @@ class GraphTransformerEncoderLayer(nn.Module):
         ff = self.pwff(out1)
         ff = self.lnorm2(torch.add(ff, out1))
         
+<<<<<<< master
+        ff = F.leaky_relu(ff, negative_slope=0.2)
+=======
         ff = F.relu(ff)
+>>>>>>> various changes and fixes
 
         return ff
 
@@ -195,7 +199,14 @@ class GraphTransformerEncoder(nn.Module):
         #x = self.transformer_1(x, data)
         for t in self.transformers:
             x = t(x, data)
+<<<<<<< master
+
+        print(self.emb_layer(global_idx)[:5])
+        print(x[:5])
+
+=======
         
+>>>>>>> various changes and fixes
         return x
 
 #-----------------------------------------------------------------------------------------------    

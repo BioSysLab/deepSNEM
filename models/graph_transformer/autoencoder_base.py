@@ -29,8 +29,13 @@ class DeepSNEM(nn.Module):
 class LinearDecoder(nn.Module):
     def __init__(self, emb_dim, original_dim):
         super(LinearDecoder, self).__init__()
+<<<<<<< master
+        #self.fc_r = nn.Linear(emb_dim, emb_dim, bias=False)
+        self.fc_out = nn.Linear(emb_dim, original_dim, bias=False)
+=======
         #self.fc_r = nn.Linear(emb_dim, emb_dim, bias=True)
         self.fc_out = nn.Linear(emb_dim, original_dim)
+>>>>>>> various changes and fixes
         self.init_weights()
         
     def init_weights(self):
@@ -38,7 +43,11 @@ class LinearDecoder(nn.Module):
         #self.fc_r.bias.data.zero_()
         #self.fc_r.weight.data.uniform_(-initrange, initrange)
         
+<<<<<<< master
+        #self.fc_out.bias.data.zero_()
+=======
         self.fc_out.bias.data.zero_()
+>>>>>>> various changes and fixes
         self.fc_out.weight.data.uniform_(-initrange, initrange)
         
     def forward(self, z):
