@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .Rproj.user
 .ipynb_checkpoints
 
@@ -35,3 +36,41 @@
 
 __pycache__/
 .vscode/
+=======
+.Rproj.user
+.ipynb_checkpoints
+
+/data/CARNIVAL_scripts
+/data/weighted graphs/
+/data/df_pairs.rds
+/data/dublicates.zip
+/data/dupl(1).rar
+/data/dupl.rar
+/data/file_info.csv
+/data/file_info.rds
+/data/file_info_dups.csv
+/data/file_info_dups.rds
+/data/graphs_combined.rar
+/data/Networks.7z
+/data/sample_embeddings_dict.pkl
+/data/sample_embeddings_dict_cw_512_fp_64.pkl
+/data/sample_embeddings_dict_cw_512_fp_128.pkl
+/data/sample_embeddings_dict_cw_512_fp_256.pkl
+/data/samples_all.csv
+/data/samples_for_dupl.csv
+/data/SNAC_database_wnames.csv
+/validation
+/data/cmap/util_files/GSE92742_Broad_LINCS_sig_info.txt
+/embeddings/graph2vec
+/embeddings/autoencoder_graph
+/embeddings/unet
+/embeddings/ged_distance
+/embeddings/ged_distance_semi
+/models/ugraphemb
+/group_check
+/graphs_combined
+/graphs_weighted
+/siamese_ged_dist
+
+__pycache__/
+>>>>>>> master
