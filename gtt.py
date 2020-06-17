@@ -49,8 +49,18 @@ unweighted_fnames = 'data/graph_info_df/samples_all.csv'
 u_fnames = pd.read_csv(unweighted_fnames)
 u_path_list = u_fnames.path_list.to_numpy()
 
+X_path = 'data/graph_info_df/all_pairs3_train_graphs.csv'
+X = pd.read_csv(X_path)
+X = X.x.to_numpy()
+
+val_path = 'data/graph_info_df/val_set_1.csv'
+val = pd.read_csv(val_path)
+val = val.graphs.to_numpy()
+
+
 # Create train val splits
-X, val = train_test_split(u_path_list, test_size=0.3)
+
+##X, val = train_test_split(u_path_list, test_size=0.3)
 train_data = SNDatasetAuto(X, global_dict)
 val_data = SNDatasetAuto(val, global_dict)
 
