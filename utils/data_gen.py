@@ -2,7 +2,7 @@ from __future__ import absolute_import, division
 import torch
 from torch.functional import F
 from torch_geometric.data import Dataset
-from torch_geometric.utils import from_networkx, degree
+from torch_geometric.utils import from_networkx, degree, to_networkx, negative_sampling, add_self_loops
 import pandas as pd
 import numpy as np
 import pickle
@@ -15,39 +15,35 @@ def to_categorical(y, num_classes):
     """ 1-hot encodes a tensor """
     return torch.eye(num_classes, dtype=torch.long)[y]
 
-def wcsv2graph(fname, prot_dict, normalize=False):
-    """
-    Weighted Graph Creator
-    """
-    sample = pd.read_csv('../../snac_data/' + fname)
+def ucsv2graph_conv(fname, prot_dict):
+
+    sample = pd.read_csv('../snac_data/' + fname)
     
     G = nx.from_pandas_edgelist(sample, source='node1', target='node2', 
-                            edge_attr=['sign','weight'], create_using=nx.DiGraph())
-    n1a1 = sample[['node1','upact1','downact1']]
-    n1a1.columns = ['node','upact','downact']
+                            edge_attr=['sign'], create_using=nx.DiGraph())
 
-    n2a2 = sample[['node2','upact2','downact2']]
-    n2a2.columns = ['node','upact','downact']
+    n1a1 = sample[['node1','activity1']]
+    n1a1.columns = ['node','act']
+
+    n2a2 = sample[['node2','activity2']]
+    n2a2.columns = ['node','act']
     na = pd.concat([n1a1,n2a2])
     na = na.drop_duplicates('node')
     na = na.set_index('node')
-    na['acts'] = na[['upact','downact']].apply(lambda x: np.hstack(x), axis=1)
-    na = na.drop(['upact', 'downact'], axis=1)['acts'].to_dict()
+    na['acts'] = na[['act']].apply(lambda x: np.hstack(x), axis=1)
+    na = na.drop(['act'], axis=1)['acts'].to_dict()
 
-    nx.set_node_attributes(G, prot_dict, 'x')
     nx.set_node_attributes(G, na, 'acts')
-
+    nx.set_node_attributes(G, prot_dict, 'x')
+    
     data = from_networkx(G)
-    data.weight = data.weight.float()
-    data.sign = data.sign.float()
-    data.x = torch.cat((data.x, data.acts.double()), axis=1)
-    data.edge_attr = data.weight
     
-    data.weight = data.acts = None
-    #Normalize data
-    if normalize:
-        data.x = F.normalize(data.x)
+    data.acts[data.acts < 0] = 0
+    data.acts = to_categorical(data.acts, 2).reshape(-1,2).long()
     
+    data.sign[data.sign < 0] = 0
+    data.sign = to_categorical(data.sign, 2).reshape(-1,2).float()
+
     return data
 
 def ucsv2graph(fname, global_dict, normalize=False):
@@ -75,30 +71,73 @@ def ucsv2graph(fname, global_dict, normalize=False):
     
     data = from_networkx(G)
     
-    deg = degree(data.edge_index.reshape(-1).sort()[0]).long()
+    G = to_networkx(data)
+    G = G.to_undirected()
+    
+    neighbors = {}
+    for g in G.nodes():
+        neighbors[g] = [n for n in G.neighbors(g)]
+    
+    nx.set_node_attributes(G, neighbors, 'pos_childs')
+    
+    
+    data_2 = from_networkx(G)
+    data_2.edge_index, _ = add_self_loops(data_2.edge_index)
+    data_2.edge_index = negative_sampling(data_2.edge_index, num_neg_samples=700)
+    
+    G = to_networkx(data_2)
+    G = G.to_undirected()
+    
+    neighbors = {}
+    for g in G.nodes():
+        neighbors[g] = [n for n in G.neighbors(g)]
+    
+    nx.set_node_attributes(G, neighbors, 'neg_childs')
+    
+    data_3 = from_networkx(G)
+
     data.acts[data.acts < 0] = 0
     data.acts = to_categorical(data.acts, 2).reshape(-1,2).long()
-    data.degree = deg.reshape(-1,1).long()
     
     data.sign[data.sign < 0] = 0
     data.sign = to_categorical(data.sign, 2).reshape(-1,2).float()
     
-    #data.ad = torch.cat([data.acts, data.degree], axis=-1)
+    data.pos_childs = data_2.pos_childs
+    data.neg_childs = data_3.neg_childs
     
     return data
 
-def csv2graph(fname, prot_dict):
+def ucsv2graph_infomax(fname, global_dict):
+    """
+    Unweighted Graph Creator
+    """
+    sample = pd.read_csv('../snac_data/' + fname)
     
-    df = pd.read_csv('../../snac_data/' + fname)
-    G = nx.from_pandas_edgelist(df, source='node1', target='node2', edge_attr='sign', create_using=nx.DiGraph)
-    nx.set_node_attributes(G, prot_dict, 'x')
+    G = nx.from_pandas_edgelist(sample, source='node1', target='node2', 
+                            edge_attr=['sign'], create_using=nx.DiGraph())
+
+    n1a1 = sample[['node1','activity1']]
+    n1a1.columns = ['node','act']
+
+    n2a2 = sample[['node2','activity2']]
+    n2a2.columns = ['node','act']
+    na = pd.concat([n1a1,n2a2])
+    na = na.drop_duplicates('node')
+    na = na.set_index('node')
+    na['acts'] = na[['act']].apply(lambda x: np.hstack(x), axis=1)
+    na = na.drop(['act'], axis=1)['acts'].to_dict()
+    
+    nx.set_node_attributes(G, global_dict,'global_idx')
+    nx.set_node_attributes(G, na, 'acts')
+    
     data = from_networkx(G)
     
-    # Custom Standard Scaler
-    m = data.x.mean(0, keepdim=True)
-    s = data.x.std(0, unbiased=False, keepdim=True)
-    data.x -= m
-    data.x /= s
+    G = to_networkx(data)
+    data.acts[data.acts < 0] = 0
+    data.acts = to_categorical(data.acts, 2).reshape(-1,2).long()
+    
+    data.sign[data.sign < 0] = 0
+    data.sign = to_categorical(data.sign, 2).reshape(-1,2).float()
     
     return data
 
@@ -153,3 +192,27 @@ class W_SNDataset(Dataset):
         data = wcsv2graph(self.fnames[idx], self.pd, self.norm)
 
         return data
+
+class SNDatasetInfomax(Dataset):
+    def __init__(self, fnames, global_dict):
+        super(SNDatasetInfomax, self).__init__()
+        self.fnames = fnames
+        self.gd = global_dict
+        
+    def len(self):
+        return len(self.fnames)
+        
+    def get(self, idx):
+        return ucsv2graph_infomax(self.fnames[idx], self.gd)
+
+class SNDatasetInfomaxConv(Dataset):
+    def __init__(self, fnames, global_dict):
+        super(SNDatasetInfomaxConv, self).__init__()
+        self.fnames = fnames
+        self.gd = global_dict
+        
+    def len(self):
+        return len(self.fnames)
+        
+    def get(self, idx):
+        return ucsv2graph_conv(self.fnames[idx], self.gd)
