@@ -63,6 +63,7 @@ __pycache__/
 /data/cmap/util_files/GSE92742_Broad_LINCS_sig_info.txt
 /embeddings/graph2vec
 /embeddings/autoencoder_graph
+/embeddings/deep_graph_infomax
 /embeddings/unet
 /embeddings/ged_distance
 /embeddings/ged_distance_semi

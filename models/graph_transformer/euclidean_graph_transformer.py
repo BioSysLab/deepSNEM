@@ -7,11 +7,12 @@ from torch.functional import F
 
 import torch_geometric.transforms as T
 from torch_geometric.utils import to_dense_adj
+from torch_geometric.nn import Set2Set
 
+dev = torch.device('cuda:0')
 #-----------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------
-
 
 class MultiHeadGraphAttention(nn.Module):
     def __init__(self, in_channels:int, n_heads: int) -> None:
@@ -26,22 +27,30 @@ class MultiHeadGraphAttention(nn.Module):
 
         self.lin_out = nn.Linear(in_channels, in_channels, bias=False)
         
-        #self.gdc = T.GDC(self_loop_weight=1, diffusion_kwargs={'alpha':0.15, 'method': 'ppr'})
         self.conv = nn.Conv2d(2, 1, kernel_size=1, stride=1, bias=True)
+        nn.init.uniform_(self.conv.weight.data)
+        nn.init.zeros_(self.conv.bias)
+
+        self.param = nn.Parameter(torch.tensor(10.)).clamp_min(1.).to(dev)
         
     def forward(self, x: torch.Tensor, data: torch.Tensor) -> torch.Tensor:
         q, k, v = self.create_qkv(x)
 
-        #data = self.gdc(data)
-        adj_w_sign = to_dense_adj(data.edge_index, None, edge_attr=data.edge_attr)
-        #adj_w_sign[adj_w_sign < 0.0009] = -100000000
+        adj_w_sign = to_dense_adj(data.edge_index, None, edge_attr=data.sign)
+        
+        #adj_after_ppr = to_dense_adj(data_2.edge_index, None, edge_attr=data_2.edge_attr)
         
         #Scaled Dot Product Attention of Heads
-        self.attn_logits = torch.matmul(q, k.transpose(-2,-1)) / math.sqrt(k.shape[-1])
-        #self.attn_logits = torch.add(self.attn_logits, self.conv(adj_w_sign.view(1,2,adj_w_sign.size(-2),-1)))
+        self.attn_logits = ((q**2).sum(-1).view(4,-1,1) + (k**2).sum(-1).view(4,1,-1))  - 2.* torch.bmm(q, k.transpose(-2,-1))
+        self.attn_logits = self.attn_logits/math.sqrt(self.in_channels)
+
+        conv_s = adj_w_sign.view(1,2,adj_w_sign.size(-2),-1)
+        #conv_ppr = adj_after_ppr.view(1,1,adj_after_ppr.size(-2), -1)
+        #conv_f = torch.cat([conv_s, conv_ppr], dim=1)
+
+        self.attn_logits = torch.add(self.attn_logits, self.param * self.conv(conv_s))
         
         self.attn_logits = F.softmax(self.attn_logits, dim=-1)
-        #self.attn_logits = self.attn_logits * adj_w_sign
 
         attn_out = torch.matmul(self.attn_logits, v)
 
@@ -108,6 +117,8 @@ class GraphTransformerEncoderLayer(nn.Module):
 
         self.pwff = FeedForward(in_channels, n_hid)
 
+        self.emb_act = nn.PReLU(self.in_channels)
+
     def forward(self, x, data):
         
         # Perform Multi Head Attention
@@ -120,7 +131,7 @@ class GraphTransformerEncoderLayer(nn.Module):
         ff = self.pwff(out1)
         ff = self.lnorm2(torch.add(ff, out1))
         
-        ff = F.leaky_relu(ff, negative_slope=0.2)
+        ff = self.emb_act(ff)
 
         return ff
 
@@ -153,16 +164,17 @@ class PostEncoding(nn.Module):
         self.act_emb = nn.Linear(2, emb_dim)
         
     def forward(self, data):
-        return self.act_emb(data.acts.float()), self.pos_enc(data.degree.view(-1).float())
+        return self.act_emb(data.acts.float())
 
 #-----------------------------------------------------------------------------------------------    
 #-----------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------
 
 class GraphTransformerEncoder(nn.Module):
-    def __init__(self, n_layers, n_heads, n_hid, pretrained_weights=None):
+    def __init__(self, n_layers, n_heads, n_hid, summarizer=None, pretrained_weights=None, train_embs = True):
         super(GraphTransformerEncoder, self).__init__()
         self.pretrained_weights = pretrained_weights
+        self.summarizer = summarizer
         if pretrained_weights is not None:
             self.n_prots, self.in_channels = pretrained_weights.shape
         else:
@@ -171,7 +183,11 @@ class GraphTransformerEncoder(nn.Module):
 
         # Create Embedding Layer and initialize using pretrained weights
         self.emb_layer = nn.Embedding(self.n_prots, self.in_channels, sparse=True)
-        self.init_weights(self.emb_layer)
+        self.emb_layer.weight.requires_grad = train_embs
+
+        if train_embs:
+            self.init_weights(self.emb_layer)
+        
         self.pe = PostEncoding(self.in_channels)
     
         self.transformer_1 = GraphTransformerEncoderLayer(self.in_channels, n_heads, n_hid)
@@ -188,19 +204,51 @@ class GraphTransformerEncoder(nn.Module):
         global_idx = data.global_idx
 
         x = self.emb_layer(global_idx)
-        act, pos = self.pe(data)
+        act = self.pe(data)
         x = torch.add(x, act)
-        x = torch.add(x, pos.squeeze())
 
         #x = self.transformer_1(x, data)
         for t in self.transformers:
             x = t(x, data)
 
-        print(self.emb_layer(global_idx)[:5])
-        print(x[:5])
+        #print(self.emb_layer(global_idx)[:5])
+        #print(x[:5])
 
         return x
 
+    def corrupt_forward_edges(self, data):
+        global_idx = data.global_idx
+
+        x = self.emb_layer(global_idx)
+        act = self.pe(data)
+        x = torch.add(x, act)
+
+        data.edge_index[1] = data.edge_index[1][torch.randperm(data.edge_index[1].size(0))]
+
+        for t in self.transformers:
+            x = t(x, data)
+
+        return x
+
+    def corrupt_forward_x(self, data):
+        global_idx = data.global_idx
+
+        x = self.emb_layer(global_idx)
+        act = self.pe(data)
+
+        x = torch.add(x, act)
+        x = x[torch.randperm(x.size(0))]
+
+        #data.edge_index[1] = data.edge_index[1][torch.randperm(data.edge_index[1].size(0))]
+
+        for t in self.transformers:
+            x = t(x, data)
+
+        return x
+
+    def summarize(self, x, batch):
+        summary = self.summarizer(x, batch)
+        return summary
 #-----------------------------------------------------------------------------------------------    
 #-----------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------
