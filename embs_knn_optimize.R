@@ -82,19 +82,19 @@ cv_knn_optimize <- function(valsets,all_df,all_embs,length_emb,k){
 splits <- readRDS("data/graph_additional/pairs/splits/split3/test_splits.rds")
 valsets <- list(splits[[1]],splits[[3]],splits[[4]],splits[[5]])
 test_set <- list(splits[[2]])
-all_df <- read.csv("data/ged_unsupervised/sig_emb_df_ged.csv")
-all_embs <- read.csv("data/ged_unsupervised/ged_unsupervised_embeddings.csv")
+all_df <- emb_proc_df
+all_embs <- emb_proc
 
 k <- seq(1,200,5)
 all_df <- all_df[-which(all_df$sig_id %in% test_set[[1]]$sig_id),]
 all_embs <- all_embs[-which(all_embs$sig_id %in% test_set[[1]]$sig_id),]
-results <- cv_knn_optimize(valsets,all_df,all_embs,512,k)
+results <- cv_knn_optimize(valsets,all_df,all_embs,128,k)
 
-k <- 26
+k <- k[11]
 
 baseline_val <- evaluate_embs_test_splits(valsets,all_df,all_embs,
-                                               length_emb = 512,k = k)
-all_df <- read.csv("data/ged_unsupervised/sig_emb_df_ged.csv")
-all_embs <- read.csv("data/ged_unsupervised/ged_unsupervised_embeddings.csv")
+                                               length_emb = 128,k = k)
+all_df <- emb_proc_df
+all_embs <- emb_proc
 baseline_test <- evaluate_embs_test_splits(test_set,all_df,all_embs,
-                                                length_emb = 512, k =k)
+                                                length_emb = 128, k =k)
