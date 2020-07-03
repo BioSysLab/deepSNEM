@@ -86,6 +86,7 @@ predict_test_moa_emb <- function(test_embs,train_embs,emb_size,k){
   set.seed(123)
   model1<- knn(train=train_embs[,2:(emb_size+1)], test=test_embs[,2:(emb_size+1)], cl=as.factor(train_embs$moa_v1), k=k,use.all = T)
   test_embs$predicted <- as.character(model1)
+  results <- test_embs
   results <- test_embs %>% dplyr::select(test_rdkit,sig_id,moa_v1,predicted,cell_id,pert_iname) %>% unique()
   return(results)
 }
@@ -197,9 +198,9 @@ graphs <- unique(c(as.character(allpairs$graph.x),as.character(allpairs$graph.y)
 
 # load train (ALL), test, validation  embeddings test, validation dataframes
 
-emb <- read.csv("embeddings/ged_distance_semi/split3/allgraphs/ss_1ep_512_cosine_train_split3_new_gen.csv") # ALL
-test_embs <- read.csv("embeddings/ged_distance_semi/split3/allgraphs/ged_ss_1ep_test_set_split3_new_gen.csv") # TEST
-val_embs <- read.csv("embeddings/ged_distance_semi/split3/allgraphs/ged_ss_3ep_val_set_1_split3_new_gen.csv") # VAL
+emb <- read.csv("embeddings/graph2vec/emb_activity_1_epoch.csv") # ALL
+test_embs <- read.csv("embeddings/ged_distance/split3/ged_embs512_testset.csv") # TEST
+val_embs <- read.csv("embeddings/ged_distance/split3/ged_embs512_valset.csv") # VAL
 
 # load test,val dataframe 
 
@@ -251,24 +252,26 @@ for (i in 2:length(results_modified)) {
   results_df <- rbind(results_df,results_modified[[i]])
 }
 
-# investigate k on KNN with euclidian distance
-#results_normal <- NULL
-#results_normal <- foreach(k_n = k) %dopar% {
-#  investigate_k(k = k_n,test_embs = test_embs,train_embs = train_embs,emb_length = 512,knn_type = "normal")
-#}
-#results_df_normal <- results_normal[[1]]
-#for (i in 2:length(results_normal)) {
-#  results_df_normal <- rbind(results_df_normal,results_normal[[i]])
-#}
+#investigate k on KNN with euclidian distance
+results_normal <- NULL
+results_normal <- foreach(k_n = k) %dopar% {
+  investigate_k(k = k_n,test_embs = val_embs,train_embs = train_embs,emb_length = 512,knn_type = "normal")
+}
+results_df_normal <- results_normal[[1]]
+for (i in 2:length(results_normal)) {
+  results_df_normal <- rbind(results_df_normal,results_normal[[i]])
+}
 
 # KNN with test predictions with k from the validation set
-k <- 171
+k <- 181
 # predictions from cosine KNN
 predictions <- knn_dist_predictions(train_embs = train_embs,test_embs = test_embs,train_labels = train_embs$moa_v1,
-                                    emb_length = 512,k = 171)
+                                    emb_length = 512,k = 181)
 
 # predictions from euclidian KNN
-#predictions <- predict_test_moa_emb(test_embs = test_embs,train_embs = train_embs,emb_size = 512,k=k)
+val_embs <- emb_proc[which(emb_proc$sig_id %in% splits[[1]]$sig_id),]
+colnames(val_embs)[514] <- "test_rdkit"
+predictions <- predict_test_moa_emb(test_embs = test_embs,train_embs = train_embs,emb_size = 512,k=k)
 # predictions from euclidian KNN
 # evaluate predictions
 eval_emb <- evaluate_predictions(predictions = predictions)
