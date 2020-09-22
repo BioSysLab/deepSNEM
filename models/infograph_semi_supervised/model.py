@@ -4,12 +4,13 @@ sys.path.append('..')
 
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 
 import torch_geometric
 from ..deep_graph_infomax.infomax import DeepGraphInfomax
 from ..graph_transformer.euclidean_graph_transformer import GraphTransformerEncoder
 
-from infomax import *
+from .infomax import *
 
 class FF(nn.Module):
     def __init__(self, input_dim, dim):

@@ -27,7 +27,7 @@ class MultiHeadGraphAttention(nn.Module):
 
         self.lin_out = nn.Linear(in_channels, in_channels, bias=False)
         
-        self.conv = nn.Conv2d(2, 1, kernel_size=1, stride=1, bias=True)
+        self.conv = nn.Conv2d(3, 1, kernel_size=1, stride=1, bias=True)
         nn.init.uniform_(self.conv.weight.data)
         nn.init.zeros_(self.conv.bias)
 
@@ -36,15 +36,15 @@ class MultiHeadGraphAttention(nn.Module):
     def forward(self, x: torch.Tensor, data: torch.Tensor) -> torch.Tensor:
         q, k, v = self.create_qkv(x)
 
-        adj_w_sign = to_dense_adj(data.edge_index, None, edge_attr=data.sign)
+        data.edge_attr = torch.cat([data.sign, data.weight.view(-1,1)], dim=-1)
+        adj_w_sign = to_dense_adj(data.edge_index, None, edge_attr=data.edge_attr)
         
-        #adj_after_ppr = to_dense_adj(data_2.edge_index, None, edge_attr=data_2.edge_attr)
         
         #Scaled Dot Product Attention of Heads
-        self.attn_logits = ((q**2).sum(-1).view(4,-1,1) + (k**2).sum(-1).view(4,1,-1))  - 2.* torch.bmm(q, k.transpose(-2,-1))
+        self.attn_logits = ((q**2).sum(-1).view(self.n_heads,-1,1) + (k**2).sum(-1).view(self.n_heads,1,-1))  - 2.* torch.bmm(q, k.transpose(-2,-1))
         self.attn_logits = self.attn_logits/math.sqrt(self.in_channels)
 
-        conv_s = adj_w_sign.view(1,2,adj_w_sign.size(-2),-1)
+        conv_s = adj_w_sign.view(1,3,adj_w_sign.size(-2),-1)
         #conv_ppr = adj_after_ppr.view(1,1,adj_after_ppr.size(-2), -1)
         #conv_f = torch.cat([conv_s, conv_ppr], dim=1)
 
@@ -179,7 +179,7 @@ class GraphTransformerEncoder(nn.Module):
             self.n_prots, self.in_channels = pretrained_weights.shape
         else:
             self.n_prots = 919
-            self.in_channels = emb_dim
+            self.in_channels = 512
 
         # Create Embedding Layer and initialize using pretrained weights
         self.emb_layer = nn.Embedding(self.n_prots, self.in_channels, sparse=True)
@@ -201,6 +201,7 @@ class GraphTransformerEncoder(nn.Module):
             emb_layer.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, data):
+
         global_idx = data.global_idx
 
         x = self.emb_layer(global_idx)
