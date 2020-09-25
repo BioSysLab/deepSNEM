@@ -7,7 +7,6 @@ from torch.functional import F
 
 import torch_geometric.transforms as T
 from torch_geometric.utils import to_dense_adj
-from torch_geometric.nn import Set2Set
 
 dev = torch.device('cuda:0')
 #-----------------------------------------------------------------------------------------------
@@ -27,7 +26,7 @@ class MultiHeadGraphAttention(nn.Module):
 
         self.lin_out = nn.Linear(in_channels, in_channels, bias=False)
         
-        self.conv = nn.Conv2d(3, 1, kernel_size=1, stride=1, bias=True)
+        self.conv = nn.Conv2d(2, 1, kernel_size=1, stride=1, bias=True)
         nn.init.uniform_(self.conv.weight.data)
         nn.init.zeros_(self.conv.bias)
 
@@ -36,15 +35,13 @@ class MultiHeadGraphAttention(nn.Module):
     def forward(self, x: torch.Tensor, data: torch.Tensor) -> torch.Tensor:
         q, k, v = self.create_qkv(x)
 
-        data.edge_attr = torch.cat([data.sign, data.weight.view(-1,1)], dim=-1)
+        data.edge_attr = data.sign
         adj_w_sign = to_dense_adj(data.edge_index, None, edge_attr=data.edge_attr)
-        
         
         #Scaled Dot Product Attention of Heads
         self.attn_logits = ((q**2).sum(-1).view(self.n_heads,-1,1) + (k**2).sum(-1).view(self.n_heads,1,-1))  - 2.* torch.bmm(q, k.transpose(-2,-1))
-        self.attn_logits = self.attn_logits/math.sqrt(self.in_channels)
-
-        conv_s = adj_w_sign.view(1,3,adj_w_sign.size(-2),-1)
+        self.attn_logits = (self.attn_logits + data.seq_mat)/math.sqrt(self.in_channels)
+        conv_s = adj_w_sign.view(1,2,adj_w_sign.size(-2),-1)
         #conv_ppr = adj_after_ppr.view(1,1,adj_after_ppr.size(-2), -1)
         #conv_f = torch.cat([conv_s, conv_ppr], dim=1)
 
@@ -139,28 +136,10 @@ class GraphTransformerEncoderLayer(nn.Module):
 #-----------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------
 
-class PositionalEmbedding(nn.Module):
-    def __init__(self, demb):
-        super(PositionalEmbedding, self).__init__()
-
-        self.demb = demb
-
-        self.inv_freq = (1 / ((10000) ** (torch.arange(0.0, demb, 2.0) / demb))).cuda()
-
-    def forward(self, pos_seq):
-        sinusoid_inp = torch.ger(pos_seq, self.inv_freq)
-        pos_emb = torch.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], dim=-1)
-        return pos_emb[:,None,:]
-
 class PostEncoding(nn.Module):
     def __init__(self, emb_dim):
         super(PostEncoding,self).__init__()
         self.emb_dim = emb_dim
-        
-        self.pos_enc = PositionalEmbedding(emb_dim)
-        #self.degree_enc = torch.nn.Embedding(21, emb_dim, padding_idx=0)
-        #self.degree_enc.weight.data = position_encoding_init(data.degree, emb_dim)
-        
         self.act_emb = nn.Linear(2, emb_dim)
         
     def forward(self, data):
@@ -190,7 +169,6 @@ class GraphTransformerEncoder(nn.Module):
         
         self.pe = PostEncoding(self.in_channels)
     
-        self.transformer_1 = GraphTransformerEncoderLayer(self.in_channels, n_heads, n_hid)
         self.transformers = nn.ModuleList([GraphTransformerEncoderLayer(self.in_channels, n_heads, n_hid) for _ in range(n_layers)])
 
     def init_weights(self, emb_layer):
@@ -225,6 +203,8 @@ class GraphTransformerEncoder(nn.Module):
         x = torch.add(x, act)
 
         data.edge_index[1] = data.edge_index[1][torch.randperm(data.edge_index[1].size(0))]
+        data.seq_mat = data.seq_mat[torch.randperm(data.seq_mat.size(0))]
+        data.seq_mat = data.seq_mat[torch.randperm(data.seq_mat.size(1))]
 
         for t in self.transformers:
             x = t(x, data)

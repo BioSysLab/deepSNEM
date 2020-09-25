@@ -32,7 +32,7 @@ class DeepGraphInfomax(torch.nn.Module):
         neg_z_x = self.encoder.corrupt_forward_x(data)
         neg_z_edges = self.encoder.corrupt_forward_edges(data)
 
-        summary = self.summary(pos_z, data.batch)
+        summary = self.summary(pos_z)
 
         return pos_z, neg_z_x, neg_z_edges, summary
 
@@ -49,8 +49,10 @@ class DeepGraphInfomax(torch.nn.Module):
         return torch.sigmoid(value) if sigmoid else value
 
     def loss(self, pos_z, neg_z_x, neg_z_edges, summary):
-        r"""Computes the mutal information maximization objective."""
+        r"""Computes the mutual information maximization objective."""
         pos_loss = -torch.log(
+            self.discriminate(pos_z, summary, sigmoid=True) + 1e-5).mean()
+        pos_loss_dups = -torch.log(
             self.discriminate(pos_z, summary, sigmoid=True) + 1e-5).mean()
         neg_loss_x = -torch.log(
             1 - self.discriminate(neg_z_x, summary, sigmoid=True) + 1e-5).mean()

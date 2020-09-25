@@ -63,10 +63,8 @@ dev = torch.device('cuda')
 encoder = GraphTransformerEncoder(n_layers=args.n_layers, n_heads=args.n_heads, n_hid=EMB_DIM, 
                             pretrained_weights=prot_embs).to(dev)
 
-summary = Set2Set(args.emb_dim, processing_steps=5, num_layers=1)
-
 model = DeepGraphInfomax(hidden_channels=args.emb_dim, encoder=encoder,
-                                     summary=lambda z, db: torch.sigmoid(z.mean(dim=0))).to(dev)
+                                     summary=lambda z, *args, **kwargs: z.mean(dim=0))).to(dev)
 
 # Training Hyperparameters
 lr = 1e-3

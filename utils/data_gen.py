@@ -1,8 +1,13 @@
 from __future__ import absolute_import, division
 import torch
+import torch.nn as nn
+from torch.functional import F
 from torch.functional import F
 from torch_geometric.data import Dataset
 from torch_geometric.utils import from_networkx, degree, to_networkx, negative_sampling, add_self_loops
+
+from torch_sparse import coalesce
+
 import pandas as pd
 import numpy as np
 import pickle
@@ -129,7 +134,7 @@ def ucsv2graph(fname, global_dict, normalize=False):
     
     return data
 
-def ucsv2graph_infomax(fname, global_dict):
+def ucsv2graph_infomax(fname, global_dict, pos_dict):
     """
     Unweighted Graph Creator
     """
@@ -153,14 +158,18 @@ def ucsv2graph_infomax(fname, global_dict):
     nx.set_node_attributes(G, na, 'acts')
     
     data = from_networkx(G)
-    
+    N = data.num_nodes
+    perturbation = np.where(data.global_idx.numpy() == 20)[0][0]
+
     G = to_networkx(data)
     data.acts[data.acts < 0] = 0
     data.acts = to_categorical(data.acts, 2).reshape(-1,2).long()
     
     data.sign[data.sign < 0] = 0
     data.sign = to_categorical(data.sign, 2).reshape(-1,2).float()
-    
+
+    data.seq_mat = sequence_dist_matrix(G, N, perturbation, 512, pos_dict)
+
     return data
 
 def load_prot_embs(size, norm=False):
@@ -199,16 +208,17 @@ class SNDatasetAuto(Dataset):
         return ucsv2graph(self.fnames[idx], self.gd)
 
 class SNDatasetInfomax(Dataset):
-    def __init__(self, fnames, global_dict):
+    def __init__(self, fnames, global_dict, pos_dict):
         super(SNDatasetInfomax, self).__init__()
         self.fnames = fnames
         self.gd = global_dict
+        self.pd = pos_dict
         
     def len(self):
         return len(self.fnames)
         
     def get(self, idx):
-        return ucsv2graph_infomax(self.fnames[idx], self.gd)
+        return ucsv2graph_infomax(self.fnames[idx], self.gd, self.pd)
 
 class SNLDataset(Dataset):
     def __init__(self, fnames, y, global_dict):
@@ -229,3 +239,46 @@ def deg_distr(train_data):
         d = degree(data.edge_index[0], num_nodes=data.num_nodes, dtype=torch.long)
         deg += torch.bincount(d, minlength=58)
     return deg
+
+class PositionalEmbedding(nn.Module):
+    def __init__(self, demb):
+        super(PositionalEmbedding, self).__init__()
+
+        self.demb = demb
+
+        self.inv_freq = (1 / ((10000) ** (torch.arange(0.0, demb, 2.0) / demb))).cuda()
+
+    def forward(self, pos_seq):
+        sinusoid_inp = torch.ger(pos_seq, self.inv_freq)
+        pos_emb = torch.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], dim=-1)
+        return pos_emb[:,None,:]
+
+def calc_pos_dict(emb_dim):
+    posemb = PositionalEmbedding(emb_dim)
+    pos_dists = [i for i in np.arange(0, 20, 0.5)]
+    pos_mat = torch.zeros(40,40)
+    for i in pos_dists:
+        for j in pos_dists:
+            ipos = posemb(torch.tensor([np.float(i)]).cuda())[0][0]
+            jpos = posemb(torch.tensor([np.float(j)]).cuda())[0][0]
+            pos_mat[int(2*i),int(2*j)] = torch.matmul(ipos, jpos.T)
+    pos_mat = torch.sqrt(pos_mat)
+    return pos_mat
+
+def sequence_dist_matrix(G, N, perturbation, emb_dim, pos_dict):
+    seq_mat = torch.zeros(N, N)
+    posemb = PositionalEmbedding(emb_dim)
+    for node in range(N):
+        for path in nx.all_simple_paths(G, source=perturbation, target=node):
+            for i in path:
+                for j in path:
+                    idx = path.index(i)
+                    jdx = path.index(j)
+                    if seq_mat[i,j] == 0.:
+                        seq_mat[i,j] = pos_dict[(idx),(jdx)]
+                    elif i==j:
+                        seq_mat[i,j] = 1.0
+                    else:
+                        seq_mat[i,j] = 0.5 * (pos_dict[idx,jdx] + seq_mat[i,j])
+                   
+    return seq_mat
