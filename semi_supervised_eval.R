@@ -2,7 +2,7 @@ library(tidyverse)
 library(doFuture)
 # parallel set number of workers
 registerDoFuture()
-plan(multiprocess,workers = 12)
+plan(multiprocess,workers = 6)
 
 # load functions
 prepape_embs <- function(emb, type = "unweighted", file_info, labels, keep_one, ave, n_emb){
@@ -193,7 +193,7 @@ write_results <- function(eval,output_dir,test_name){
 file_info <- readRDS("data/graph_info_df/file_info_nodups.rds")
 file_info_dups <- readRDS("data/graph_info_df/file_info_dups.rds")
 labels <- readRDS("data/cmap/labels/labels_first_pass.rds")
-allpairs <- readRDS("data/graph_additional/pairs/splits/split3/allpairs3.rds")
+allpairs <- readRDS("embeddings/ged_distance_semi/split3/allpairs3.rds")
 graphs <- unique(c(as.character(allpairs$graph.x),as.character(allpairs$graph.y))) # all graphs with moa
 
 # load train (ALL), test, validation  embeddings test, validation dataframes
@@ -208,7 +208,7 @@ test_df <- readRDS("data/graph_additional/pairs/splits/split3/test_set.rds")
 val_df <- readRDS("data/graph_additional/pairs/splits/split3/val_set_1.rds")
 
 # preprocess embeddings, for each sig id keep one embedding (either averaged or random selection)
-emb <- emb[,-1]
+#emb <- emb[,-1]
 colnames(emb)[1] <- "emb"
 emb_proc <- prepape_embs(emb = emb,file_info = file_info,labels = labels,keep_one = F ,ave = T,n_emb = (ncol(emb)-1))
 

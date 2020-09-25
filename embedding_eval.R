@@ -225,11 +225,11 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
   for (i in 1:25) {
     labels <- emb_task2_tsne$identifier
     labels <- as.data.frame(labels)
-    labels$label <- "duplicate"
-    labels$label[which(labels$labels %in% identifier[i])] <- "non duplicate" 
-    labels$label <- as.factor(labels$label)
+    labels$label <- "non duplicate"
+    labels$label[which((labels$labels %in% identifier[i]))] <- "duplicate" 
+    labels$label <- factor(labels$label,levels=c("non duplicate","duplicate"))
     df2 <- data.frame(V1 = tsne2$Y[,1], V2 =tsne2$Y[,2], label = labels$label)
-    g2 <- ggplot(df2 %>% mutate(label == "duplicate") %>% arrange(label), aes(V1, V2))+
+    g2 <- ggplot(df2 %>% mutate(label == "non duplicate") %>% arrange(label), aes(V1, V2))+
       geom_point(aes(color = label),show.legend = T)
     g[[i]] <- g2
   }
@@ -244,8 +244,8 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
     labels <- emb_task2_tsne$identifier
     labels <- as.data.frame(labels)
     labels$label <- "duplicate"
-    labels$label[which(labels$labels %in% identifier[i])] <- "non duplicate" 
-    labels$label <- as.factor(labels$label)
+    labels$label[which(!(labels$labels %in% identifier[i]))] <- "non duplicate" 
+    labels$label <- factor(labels$label,levels=c("non duplicate","duplicate"))
     df2 <- data.frame(V1 = umap2$layout[,1], V2 =umap2$layout[,2], label = labels$label)
     g2map <- ggplot(df2 %>% mutate(label == "duplicate") %>% arrange(label), aes(V1, V2))+
       geom_point(aes(color = label),show.legend = T)
@@ -506,11 +506,11 @@ file_info_dups <- readRDS("data/graph_info_df/file_info_dups.rds")
 ###
 distance_type = "cosine"
 ###
-output_dir <- "validation/validation_transformer/gt_1024_tl_1_leaky_relu_sum"
+output_dir <- "validation/validation_g2v"
 
 
 
-ds_path <- "C:/Users/user/Documents/phd/GSE92742_Broad_LINCS_Level5_COMPZ.MODZ_n473647x12328.gctx"
+ds_path <- "../GSE92742_Broad_LINCS_Level5_COMPZ.MODZ_n473647x12328.gctx"
 library(tidyverse)
 landmark <- read_tsv(file = "data/cmap/util_files/cmap_landmark_genes.txt")
 
@@ -520,7 +520,7 @@ sig_mapping <- readRDS("data/graph_info_df/sig_mapping.rds")
 
 ### create test embedding df
 
-test <- read.csv("embeddings/autoencoder_graph/gt_1024_tl_1_leaky_relu_sum.csv")
+test <- read.csv("embeddings/graph2vec/emb512_activity.csv")
 
 #test_files <- as.character(test$X)
 #test_files <- as.data.frame(test_files)
@@ -530,6 +530,15 @@ test <- read.csv("embeddings/autoencoder_graph/gt_1024_tl_1_leaky_relu_sum.csv")
 #test_files <- test_files %>% dplyr::select(test_files,emb.x,emb.y) %>% mutate(emb = if_else(condition = is.na(emb.x),true = emb.y,false = emb.x))
 #test_files <- test_files %>% dplyr::select(test_files,emb)
 #test <- left_join(test_files,test,by= c("test_files"="X"))
+
+#alevizos nans####
+#test <- test %>% filter(!is.na(X0))
+#test_names <- read.csv("../../Downloads/val_names.csv")
+#test_names <- test_names[,-1]
+#test_names <- as.character(test_names)
+#test$emb <- test_names
+######
+
 test <- test[,-1]
 #embs <- read.csv("embeddings/graph2vec/emb_clustered_norm_500.csv")
 #test[,1] <- as.character(embs[,1])

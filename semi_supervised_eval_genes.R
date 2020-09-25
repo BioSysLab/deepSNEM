@@ -183,9 +183,9 @@ sigs <- unique(c(as.character(allpairs$sig_id_original.x),as.character(allpairs$
 
 # load train (ALL), test, validation  embeddings test, validation dataframes
 
-emb <- read.csv("embeddings/ged_distance_semi/split3/gsea_embs256_genes_2ep_train.csv") # ALL
-test_embs <- read.csv("embeddings/ged_distance_semi/split3/gsea_embs256_genes_2ep_test.csv") # TEST
-val_embs <- read.csv("embeddings/ged_distance_semi/split3/gsea_embs256_genes_2ep_val.csv") # VAL
+emb <- read.csv("../deepSNEM_personal/tf_embs_q1.csv") # ALL
+test_embs <- read.csv("../deepSNEM_personal/Ugraphemp/embeddings/gsea_embs512_best_genes_test_0.csv") # TEST
+val_embs <- read.csv("../deepSNEM_personal/Ugraphemp/embeddings/gsea_embs512_best_genes_val_0.csv") # VAL
 
 # load test,val dataframe 
 
@@ -224,7 +224,7 @@ train_embs <- train_embs %>% filter(moa_v1 != "") %>% filter(!is.na(moa_v1))
 
 #visualize test/val and train embeddings
 vis_train_test_embs(test_embs = test_embs,train_embs = train_embs,moa_n = 10,perpl = 5,init_dim = 80,iter = 1000,emb_size = 256,
-                    output_dir = "vis",name = "test_set_emb256_genes_2ep"  )
+                    output_dir = "vis",name = "test_set_emb512_genes_2ep"  )
 
 # investigate k on the validation embeddings on KNN with cosine or euclidian distance
 
@@ -232,7 +232,7 @@ k <- seq(1,200,5)
 
 results_modified <- NULL
 results_modified <- foreach(k_n = k) %dopar% {
-  investigate_k(k = k_n,test_embs = test_embs,train_embs = train_embs,emb_length = 256,knn_type = "modified")
+  investigate_k(k = k_n,test_embs = test_embs,train_embs = train_embs,emb_length = 512,knn_type = "modified")
 }
 results_df <- results_modified[[1]]
 for (i in 2:length(results_modified)) {
@@ -253,7 +253,7 @@ for (i in 2:length(results_modified)) {
 k <- 61
 # predictions from cosine KNN
 predictions <- knn_dist_predictions(train_embs = train_embs,test_embs = test_embs,train_labels = train_embs$moa_v1,
-                                    emb_length = 256,k = k)
+                                    emb_length = 512,k = k)
 
 # predictions from euclidian KNN
 #predictions <- predict_test_moa_emb(test_embs = test_embs,train_embs = train_embs,emb_size = 512,k=k)
@@ -261,7 +261,7 @@ predictions <- knn_dist_predictions(train_embs = train_embs,test_embs = test_emb
 # evaluate predictions
 eval_emb <- evaluate_predictions(predictions = predictions)
 
-write_results(eval_emb,output_dir = "embeddings/ged_distance_semi/split3/results",test_name = "genes_semi_emb256_test_2ep")
+write_results(eval_emb,output_dir = "embeddings/ged_distance_semi/split3/results",test_name = "genes_semi_emb512_test_2ep")
 
 
 

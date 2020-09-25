@@ -79,22 +79,33 @@ cv_knn_optimize <- function(valsets,all_df,all_embs,length_emb,k){
   return(k_invest)
 }
 
-splits <- readRDS("data/graph_additional/pairs/splits/split3/test_splits.rds")
+splits <- readRDS("embeddings/ged_distance_semi/split3/test_splits.rds")
+#val1 <- readRDS('../deepSNEM_personal/val_set_1_withoriginals.rds')
+#val1 <- val1 %>% mutate(sig_id=sig_id_original)
+#val2 <- readRDS('../deepSNEM_personal/val_set_2_withoriginals.rds')
+#val2 <- val2 %>% mutate(sig_id=sig_id_original)
+#val3 <- readRDS('../deepSNEM_personal/val_set_3_withoriginals.rds')
+#val3 <- val3 %>% mutate(sig_id=sig_id_original)
+#val4 <- readRDS('../deepSNEM_personal/val_set_4_withoriginals.rds')
+#val4 <- val4 %>% mutate(sig_id=sig_id_original)
+#valsets <- list(val1,val2,val3,val4)
 valsets <- list(splits[[1]],splits[[3]],splits[[4]],splits[[5]])
 test_set <- list(splits[[2]])
+#test_set <- readRDS('../deepSNEM_personal/test_set_withoriginals.rds')
+#test_set <- test_set %>% mutate(sig_id=sig_id_original)
 all_df <- emb_proc_df
 all_embs <- emb_proc
 
-k <- seq(1,200,5)
-all_df <- all_df[-which(all_df$sig_id %in% test_set[[1]]$sig_id),]
-all_embs <- all_embs[-which(all_embs$sig_id %in% test_set[[1]]$sig_id),]
-results <- cv_knn_optimize(valsets,all_df,all_embs,128,k)
+k <- seq(1,200,1)
+all_df <- all_df[-which(all_df$sig_id %in% test_set$sig_id),]
+all_embs <- all_embs[-which(all_embs$sig_id %in% test_set$sig_id),]
+results <- cv_knn_optimize(valsets,all_df,all_embs,175,k)
 
-k <- k[11]
+k <- k[25]
 
 baseline_val <- evaluate_embs_test_splits(valsets,all_df,all_embs,
-                                               length_emb = 128,k = k)
+                                               length_emb = 175,k = k)
 all_df <- emb_proc_df
 all_embs <- emb_proc
-baseline_test <- evaluate_embs_test_splits(test_set,all_df,all_embs,
-                                                length_emb = 128, k =k)
+baseline_test <- evaluate_embs_test_splits(list(test_set),all_df,all_embs,
+                                                length_emb = 175, k =k)

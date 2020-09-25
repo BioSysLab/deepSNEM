@@ -33,6 +33,13 @@
 /graphs_combined
 /graphs_weighted
 /siamese_ged_dist
+/data/samples_GCNN.csv
+/data/samples_with_labels_g2v_1024.csv
+/data/samples_with_labels_g2v_128.csv
+/data/samples_with_labels_g2v_256.csv
+/data/samples_with_labels_g2v_512.csv
+/data/samples_with_labels_tf_175.csv
+/embeddings/tranformers
 
 __pycache__/
 .vscode/
@@ -72,6 +79,13 @@ __pycache__/
 /graphs_combined
 /graphs_weighted
 /siamese_ged_dist
+/data/samples_GCNN.csv
+/data/samples_with_labels_g2v_1024.csv
+/data/samples_with_labels_g2v_128.csv
+/data/samples_with_labels_g2v_256.csv
+/data/samples_with_labels_g2v_512.csv
+/data/samples_with_labels_tf_175.csv
+/embeddings/tranformers
 
 __pycache__/
 >>>>>>> master
