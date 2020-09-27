@@ -52,8 +52,6 @@ class DeepGraphInfomax(torch.nn.Module):
         r"""Computes the mutual information maximization objective."""
         pos_loss = -torch.log(
             self.discriminate(pos_z, summary, sigmoid=True) + 1e-5).mean()
-        pos_loss_dups = -torch.log(
-            self.discriminate(pos_z, summary, sigmoid=True) + 1e-5).mean()
         neg_loss_x = -torch.log(
             1 - self.discriminate(neg_z_x, summary, sigmoid=True) + 1e-5).mean()
         neg_loss_edges = -torch.log(

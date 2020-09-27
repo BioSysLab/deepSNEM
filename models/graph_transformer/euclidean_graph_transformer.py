@@ -31,16 +31,18 @@ class MultiHeadGraphAttention(nn.Module):
         nn.init.zeros_(self.conv.bias)
 
         self.param = nn.Parameter(torch.tensor(10.)).clamp_min(1.).to(dev)
-        
+        self.dist_param = nn.Parameter(torch.tensor(1.)).to(dev)
+
     def forward(self, x: torch.Tensor, data: torch.Tensor) -> torch.Tensor:
         q, k, v = self.create_qkv(x)
 
         data.edge_attr = data.sign
         adj_w_sign = to_dense_adj(data.edge_index, None, edge_attr=data.edge_attr)
-        
+
         #Scaled Dot Product Attention of Heads
-        self.attn_logits = ((q**2).sum(-1).view(self.n_heads,-1,1) + (k**2).sum(-1).view(self.n_heads,1,-1))  - 2.* torch.bmm(q, k.transpose(-2,-1))
-        self.attn_logits = (self.attn_logits + data.seq_mat)/math.sqrt(self.in_channels)
+        #self.attn_logits = ((q**2).sum(-1).view(self.n_heads,-1,1) + (k**2).sum(-1).view(self.n_heads,1,-1))  - 2.* torch.bmm(q, k.transpose(-2,-1))
+        self.attn_logits = torch.matmul(q, k.transpose(-2,-1))
+        self.attn_logits = (self.attn_logits + self.dist_param * data.seq_mat) / np.sqrt(self.in_channels)
         conv_s = adj_w_sign.view(1,2,adj_w_sign.size(-2),-1)
         #conv_ppr = adj_after_ppr.view(1,1,adj_after_ppr.size(-2), -1)
         #conv_f = torch.cat([conv_s, conv_ppr], dim=1)
@@ -233,3 +235,15 @@ class GraphTransformerEncoder(nn.Module):
 #-----------------------------------------------------------------------------------------------    
 #-----------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------
+
+class MultipleOptimizer:
+    def __init__(self, *op):
+        self.optimizers = op
+
+    def zero_grad(self):
+        for op in self.optimizers:
+            op.zero_grad()
+
+    def step(self):
+        for op in self.optimizers:
+            op.step()

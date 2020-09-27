@@ -159,9 +159,9 @@ def ucsv2graph_infomax(fname, global_dict, pos_dict):
     
     data = from_networkx(G)
     N = data.num_nodes
-    perturbation = np.where(data.global_idx.numpy() == 20)[0][0]
 
     G = to_networkx(data)
+    perturbation = list(nx.topological_sort(G))[0]
     data.acts[data.acts < 0] = 0
     data.acts = to_categorical(data.acts, 2).reshape(-1,2).long()
     
@@ -195,6 +195,29 @@ def load_prot_embs(size, norm=False):
     
     return prot_embs, global_dict
 
+def load_prot_embs_go(size, norm=False):
+    prot_path = 'data/prot_embeddings/linear_corex_embeddings/lc_go_term_embeddings/lc_go_term_embeddings_dict_{}.pkl'.format(size)
+    prot_dict = {}
+    global_dict = {}
+
+    unique_prots = 'data/prot_embeddings/new_features/proteins.csv'
+    unique_df = pd.read_csv(unique_prots)
+
+    for idx, prot in enumerate(unique_df.proteins.to_numpy()):
+        global_dict[prot] = idx
+
+    with open(prot_path, 'rb') as f:
+        prot_dict = pickle.load(f)
+
+    #prot_dict['NKX3~1'] = prot_dict.pop('NKX3-1') # due to key mismatch
+    prot_embs = np.array([prot_dict[key] for key in global_dict.keys()])
+    
+    if norm and size != 1024:
+        norm = Normalizer()
+        prot_embs = norm.fit_transform(prot_embs)
+    
+    return prot_embs, global_dict
+
 class SNDatasetAuto(Dataset):
     def __init__(self, fnames, global_dict):
         super(SNDatasetAuto, self).__init__()
@@ -208,17 +231,20 @@ class SNDatasetAuto(Dataset):
         return ucsv2graph(self.fnames[idx], self.gd)
 
 class SNDatasetInfomax(Dataset):
-    def __init__(self, fnames, global_dict, pos_dict):
+    def __init__(self, fnames, fnames_neg, global_dict, pos_mat):
         super(SNDatasetInfomax, self).__init__()
         self.fnames = fnames
+        self.fnames_neg = fnames_neg
         self.gd = global_dict
-        self.pd = pos_dict
+        self.pm = pos_mat
         
     def len(self):
         return len(self.fnames)
         
     def get(self, idx):
-        return ucsv2graph_infomax(self.fnames[idx], self.gd, self.pd)
+        pos = ucsv2graph_infomax(self.fnames[idx], self.gd, self.pm)
+        neg = ucsv2graph_infomax(self.fnames_neg[idx], self.gd, self.pm)
+        return pos, neg
 
 class SNLDataset(Dataset):
     def __init__(self, fnames, y, global_dict):
@@ -246,21 +272,21 @@ class PositionalEmbedding(nn.Module):
 
         self.demb = demb
 
-        self.inv_freq = (1 / ((10000) ** (torch.arange(0.0, demb, 2.0) / demb))).cuda()
+        self.inv_freq = (1 / ((10000) ** (torch.arange(0.0, demb, 2.0) / demb)))
 
     def forward(self, pos_seq):
         sinusoid_inp = torch.ger(pos_seq, self.inv_freq)
         pos_emb = torch.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], dim=-1)
         return pos_emb[:,None,:]
 
-def calc_pos_dict(emb_dim):
+def calc_pos_mat(emb_dim):
     posemb = PositionalEmbedding(emb_dim)
-    pos_dists = [i for i in np.arange(0, 20, 0.5)]
-    pos_mat = torch.zeros(40,40)
+    pos_dists = [i for i in np.arange(0, 30)]
+    pos_mat = torch.zeros(60,60)
     for i in pos_dists:
         for j in pos_dists:
-            ipos = posemb(torch.tensor([np.float(i)]).cuda())[0][0]
-            jpos = posemb(torch.tensor([np.float(j)]).cuda())[0][0]
+            ipos = posemb(torch.tensor([np.float(i)]))[0][0]
+            jpos = posemb(torch.tensor([np.float(j)]))[0][0]
             pos_mat[int(2*i),int(2*j)] = torch.matmul(ipos, jpos.T)
     pos_mat = torch.sqrt(pos_mat)
     return pos_mat
@@ -282,3 +308,10 @@ def sequence_dist_matrix(G, N, perturbation, emb_dim, pos_dict):
                         seq_mat[i,j] = 0.5 * (pos_dict[idx,jdx] + seq_mat[i,j])
                    
     return seq_mat
+
+def cid(path_list, cell_id):
+    negs = np.empty_like(path_list)
+    for i in tqdm(range(len(cell_id))):
+        a = path_list[cell_id != cell_id[i]]
+        negs[i] = np.random.choice(a, 1)[0]
+    return negs
