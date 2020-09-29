@@ -2,6 +2,8 @@ import torch
 from torch.nn import Parameter
 from sklearn.linear_model import LogisticRegression
 
+from models.graph_transformer.autoencoder_base import FermiDiracDecoder
+
 from .inits import reset, uniform
 
 EPS = 1e-15
@@ -14,6 +16,7 @@ class DeepGraphInfomax(torch.nn.Module):
         self.hidden_channels = hidden_channels
         self.encoder = encoder
         self.summary = summary
+        self.discriminator = FermiDiracDecoder(0.5)
 
         self.weight = Parameter(torch.Tensor(hidden_channels, hidden_channels))
 
@@ -29,14 +32,13 @@ class DeepGraphInfomax(torch.nn.Module):
         corruptions and their summary representation."""
         pos_z = self.encoder(data)
 
-        neg_z_x = self.encoder.corrupt_forward_x(data)
-        neg_z_edges = self.encoder.corrupt_forward_edges(data)
+        neg_z = self.encoder.corrupt_forward(data)
 
         summary = self.summary(pos_z)
 
-        return pos_z, neg_z_x, neg_z_edges, summary
+        return pos_z, neg_z, summary
 
-    def discriminate(self, z, summary, sigmoid=True):
+    def discriminate(self, z, summary, fd=True):
         r"""Given the patch-summary pair :obj:`z` and :obj:`summary`, computes
         the probability scores assigned to this patch-summary pair.
         Args:
@@ -46,18 +48,16 @@ class DeepGraphInfomax(torch.nn.Module):
                 (default: :obj:`True`)
         """
         value = torch.matmul(z, torch.matmul(self.weight, summary))
-        return torch.sigmoid(value) if sigmoid else value
+        return self.discriminator(value) if fd else value
 
-    def loss(self, pos_z, neg_z_x, neg_z_edges, summary):
+    def loss(self, pos_z, neg_z, summary):
         r"""Computes the mutual information maximization objective."""
         pos_loss = -torch.log(
             self.discriminate(pos_z, summary, sigmoid=True) + 1e-5).mean()
-        neg_loss_x = -torch.log(
-            1 - self.discriminate(neg_z_x, summary, sigmoid=True) + 1e-5).mean()
-        neg_loss_edges = -torch.log(
-            1 - self.discriminate(neg_z_edges, summary, sigmoid=True) + 1e-5).mean()
+        neg_loss = -torch.log(
+            1 - self.discriminate(neg_z, summary, sigmoid=True) + 1e-5).mean()
 
-        return pos_loss + neg_loss_x + neg_loss_edges
+        return pos_loss + neg_loss
 
     def test(self, train_z, train_y, test_z, test_y, solver='lbfgs',
              multi_class='auto', *args, **kwargs):

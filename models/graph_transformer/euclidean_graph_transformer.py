@@ -9,6 +9,24 @@ import torch_geometric.transforms as T
 from torch_geometric.utils import to_dense_adj
 
 dev = torch.device('cuda:0')
+#-------------------------------dev = torch.device('cuda:0')----------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
+
+class PositionalEmbedding(nn.Module):
+    def __init__(self, d):
+        super().__init__()
+        self.d = d
+        inv_freq = 1 / (10000 ** (torch.arange(0.0, d, 2.0) / d))
+        self.register_buffer("inv_freq", inv_freq)
+        
+    def forward(self, positions: torch.LongTensor, # (seq, )
+               ):
+        # outer product
+        sinusoid_inp = torch.einsum("nd,j->ndj", positions.float(), self.inv_freq)
+        pos_emb = torch.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], dim=-1)
+        return pos_emb[:,None,:]
+
 #-----------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------
@@ -30,8 +48,9 @@ class MultiHeadGraphAttention(nn.Module):
         nn.init.uniform_(self.conv.weight.data)
         nn.init.zeros_(self.conv.bias)
 
-        self.param = nn.Parameter(torch.tensor(10.)).clamp_min(1.).to(dev)
-        self.dist_param = nn.Parameter(torch.tensor(1.)).to(dev)
+        self.param = nn.Parameter(torch.tensor(5.), requires_grad=True).clamp_min(1.).to(dev)
+        self.posemb = PositionalEmbedding(in_channels)
+        self.pos_lin = nn.Linear(in_channels, in_channels)
 
     def forward(self, x: torch.Tensor, data: torch.Tensor) -> torch.Tensor:
         q, k, v = self.create_qkv(x)
@@ -41,11 +60,15 @@ class MultiHeadGraphAttention(nn.Module):
 
         #Scaled Dot Product Attention of Heads
         #self.attn_logits = ((q**2).sum(-1).view(self.n_heads,-1,1) + (k**2).sum(-1).view(self.n_heads,1,-1))  - 2.* torch.bmm(q, k.transpose(-2,-1))
-        self.attn_logits = torch.matmul(q, k.transpose(-2,-1))
-        self.attn_logits = (self.attn_logits + self.dist_param * data.seq_mat) / np.sqrt(self.in_channels)
+        cont_attn = torch.matmul(q, k.transpose(-2,-1))
+        if data.seq_mat is not None:
+            pos = self.pos_lin(self.posemb(data.seq_mat))
+            pos = pos.view(self.n_heads, data.seq_mat.shape[0], -1, self.depth)
+            pos_attn = torch.einsum('hik,hijk->hij',q,pos)
+            self.attn_logits = torch.add(cont_attn,pos_attn) / np.sqrt(self.in_channels)
+        else:
+            self.attn_logits = cont_attn/np.sqrt(self.in_channels)
         conv_s = adj_w_sign.view(1,2,adj_w_sign.size(-2),-1)
-        #conv_ppr = adj_after_ppr.view(1,1,adj_after_ppr.size(-2), -1)
-        #conv_f = torch.cat([conv_s, conv_ppr], dim=1)
 
         self.attn_logits = torch.add(self.attn_logits, self.param * self.conv(conv_s))
         
@@ -78,8 +101,8 @@ class FeedForward(nn.Module):
     def __init__(self, in_channels, emb_dim):
         super(FeedForward, self).__init__()
 
-        self.ff1 = nn.Linear(in_channels, 4096)
-        self.ff2 = nn.Linear(4096, emb_dim)
+        self.ff1 = nn.Linear(in_channels, 2048)
+        self.ff2 = nn.Linear(2048, emb_dim)
         
         self.init_weights(FeedForward)
 
@@ -197,12 +220,13 @@ class GraphTransformerEncoder(nn.Module):
 
         return x
 
-    def corrupt_forward_edges(self, data):
+    def corrupt_forward(self, data):
         global_idx = data.global_idx
 
         x = self.emb_layer(global_idx)
         act = self.pe(data)
         x = torch.add(x, act)
+        x = x[torch.randperm(x.size(0))]
 
         data.edge_index[1] = data.edge_index[1][torch.randperm(data.edge_index[1].size(0))]
         data.seq_mat = data.seq_mat[torch.randperm(data.seq_mat.size(0))]
@@ -213,24 +237,8 @@ class GraphTransformerEncoder(nn.Module):
 
         return x
 
-    def corrupt_forward_x(self, data):
-        global_idx = data.global_idx
-
-        x = self.emb_layer(global_idx)
-        act = self.pe(data)
-
-        x = torch.add(x, act)
-        x = x[torch.randperm(x.size(0))]
-
-        #data.edge_index[1] = data.edge_index[1][torch.randperm(data.edge_index[1].size(0))]
-
-        for t in self.transformers:
-            x = t(x, data)
-
-        return x
-
-    def summarize(self, x, batch):
-        summary = self.summarizer(x, batch)
+    def summarize(self, x):
+        summary = self.summarizer(x)
         return summary
 #-----------------------------------------------------------------------------------------------    
 #-----------------------------------------------------------------------------------------------

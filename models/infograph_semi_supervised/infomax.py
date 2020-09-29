@@ -100,7 +100,7 @@ def get_negative_expectation(q_samples, measure, average=True):
     else:
         return Eq
 
-def local_global_loss_(l_enc, g_enc, edge_index, batch, measure):
+def local_global_loss_(l_enc, g_enc, edge_index, measure):
     '''
     Args:
         l: Local feature map.

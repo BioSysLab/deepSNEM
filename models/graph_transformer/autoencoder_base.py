@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from torch.functional import F
 
+dev = torch.device('cuda:0')
+
 class DeepSNEM(nn.Module):
     """
     Abstract signaling networks autoencoder class.

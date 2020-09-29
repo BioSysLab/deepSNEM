@@ -57,8 +57,40 @@ def wcsv2graph(fname, global_dict, y):
     nx.set_node_attributes(G, nau, 'upacts')
     
     data = from_networkx(G)
-    
+
     G = to_networkx(data)
+    aps = nx.floyd_warshall_numpy(G)
+    aps[aps == np.inf] = 0.
+    aps = torch.FloatTensor(aps)
+
+    G1 = G.reverse()
+    aps_r = nx.floyd_warshall_numpy(G1)
+    aps_r[aps_r == np.inf] = 0.
+    aps_r = torch.FloatTensor(aps_r)
+
+    G = G.to_undirected()
+
+    neighbors = {}
+    for g in G.nodes():
+        neighbors[g] = [n for n in G.neighbors(g)]
+    
+    nx.set_node_attributes(G, neighbors, 'pos_childs')
+
+    data_2 = from_networkx(G)
+    data_2.edge_index, _ = add_self_loops(data_2.edge_index)
+    data_2.edge_index = negative_sampling(data_2.edge_index, num_neg_samples=800)
+    
+    G = to_networkx(data_2)
+    G = G.to_undirected()
+    
+    neighbors = {}
+    for g in G.nodes():
+        neighbors[g] = [n for n in G.neighbors(g)]
+    
+    nx.set_node_attributes(G, neighbors, 'neg_childs')
+
+    data_3 = from_networkx(G)
+
     data.weight = data.weight.float()
     data.downacts, data.upacts = data.downacts.double(), data.upacts.float()
     data.acts = torch.cat([data.downacts.float(), data.upacts.float()], dim=-1).double()
@@ -67,13 +99,78 @@ def wcsv2graph(fname, global_dict, y):
     data.sign[data.sign < 0] = 0
     data.sign = data.sign.long()
     data.sign = to_categorical(data.sign, 2).reshape(-1,2).float()
+
+    data.pos_childs = data_2.pos_childs
+    data.neg_childs = data_3.neg_childs
     
     data.y = torch.tensor(y)
     data.label = torch.tensor(np.argmax(y)).view(-1).long()
+
+    data.seq_mat = torch.add(aps, aps_r)
     
     return data
 
-def ucsv2graph(fname, global_dict, normalize=False):
+def wcsv2graph_infomax(fname, global_dict):
+    """
+    Weighted Graph Creator
+    """
+    sample = pd.read_csv('../snac_data/' + fname)
+    
+    G = nx.from_pandas_edgelist(sample, source='node1', target='node2', 
+                            edge_attr=['sign', 'weight'], create_using=nx.DiGraph())
+
+    n1a1d = sample[['node1','downact1']]
+    n1a1u = sample[['node1','upact1']]
+    n1a1d.columns = ['node','downact']
+    n1a1u.columns = ['node', 'upact']
+
+    n2a2d = sample[['node2','downact2']]
+    n2a2u = sample[['node2','upact2']]
+    n2a2d.columns = ['node','downact']
+    n2a2u.columns = ['node', 'upact']
+    
+    nad = pd.concat([n1a1d,n2a2d])
+    nad = nad.drop_duplicates('node')
+    nad = nad.set_index('node')
+    nad['downacts'] = nad[['downact']].apply(lambda x: np.hstack(x), axis=1)
+    nad = nad.drop(['downact'], axis=1)['downacts'].to_dict()
+    
+    nau = pd.concat([n1a1u,n2a2u])
+    nau = nau.drop_duplicates('node')
+    nau = nau.set_index('node')
+    nau['upacts'] = nau[['upact']].apply(lambda x: np.hstack(x), axis=1)
+    nau = nau.drop(['upact'], axis=1)['upacts'].to_dict()
+    
+    nx.set_node_attributes(G, global_dict,'global_idx')
+    nx.set_node_attributes(G, nad, 'downacts')
+    nx.set_node_attributes(G, nau, 'upacts')
+    
+    data = from_networkx(G)
+
+    G = to_networkx(data)
+    aps = nx.floyd_warshall_numpy(G)
+    aps[aps == np.inf] = 0.
+    aps = torch.FloatTensor(aps)
+
+    G1 = G.reverse()
+    aps_r = nx.floyd_warshall_numpy(G1)
+    aps_r[aps_r == np.inf] = 0.
+    aps_r = torch.FloatTensor(aps_r)
+
+    data.weight = data.weight.float()
+    data.downacts, data.upacts = data.downacts.double(), data.upacts.float()
+    data.acts = torch.cat([data.downacts.float(), data.upacts.float()], dim=-1).double()
+    data.downacts = data.upacts = None
+    
+    data.sign[data.sign < 0] = 0
+    data.sign = data.sign.long()
+    data.sign = to_categorical(data.sign, 2).reshape(-1,2).float()
+
+    data.seq_mat = torch.add(aps, aps_r)
+    
+    return data
+
+def ucsv2graph(fname, global_dict):
     """
     Unweighted Graph Creator
     """
@@ -99,6 +196,14 @@ def ucsv2graph(fname, global_dict, normalize=False):
     data = from_networkx(G)
     
     G = to_networkx(data)
+    aps = nx.floyd_warshall_numpy(G)
+    aps[aps == np.inf] = 0.
+    aps = torch.FloatTensor(aps)
+
+    G1 = G.reverse()
+    aps_r = nx.floyd_warshall_numpy(G1)
+    aps_r[aps_r == np.inf] = 0.
+    aps_r = torch.FloatTensor(aps_r)
     G = G.to_undirected()
     
     neighbors = {}
@@ -131,10 +236,12 @@ def ucsv2graph(fname, global_dict, normalize=False):
     
     data.pos_childs = data_2.pos_childs
     data.neg_childs = data_3.neg_childs
+
+    data.seq_mat = torch.add(aps, aps_r)
     
     return data
 
-def ucsv2graph_infomax(fname, global_dict, pos_dict):
+def ucsv2graph_infomax(fname, global_dict):
     """
     Unweighted Graph Creator
     """
@@ -158,17 +265,24 @@ def ucsv2graph_infomax(fname, global_dict, pos_dict):
     nx.set_node_attributes(G, na, 'acts')
     
     data = from_networkx(G)
-    N = data.num_nodes
-
+    
     G = to_networkx(data)
-    perturbation = list(nx.topological_sort(G))[0]
+    aps = nx.floyd_warshall_numpy(G)
+    aps[aps == np.inf] = 0.
+    aps = torch.FloatTensor(aps)
+
+    G1 = G.reverse()
+    aps_r = nx.floyd_warshall_numpy(G1)
+    aps_r[aps_r == np.inf] = 0.
+    aps_r = torch.FloatTensor(aps_r)
+
     data.acts[data.acts < 0] = 0
     data.acts = to_categorical(data.acts, 2).reshape(-1,2).long()
     
     data.sign[data.sign < 0] = 0
     data.sign = to_categorical(data.sign, 2).reshape(-1,2).float()
 
-    data.seq_mat = sequence_dist_matrix(G, N, perturbation, 512, pos_dict)
+    data.seq_mat = torch.add(aps, aps_r)
 
     return data
 
@@ -231,23 +345,49 @@ class SNDatasetAuto(Dataset):
         return ucsv2graph(self.fnames[idx], self.gd)
 
 class SNDatasetInfomax(Dataset):
-    def __init__(self, fnames, fnames_neg, global_dict, pos_mat):
+    def __init__(self, fnames, global_dict):
         super(SNDatasetInfomax, self).__init__()
         self.fnames = fnames
-        self.fnames_neg = fnames_neg
         self.gd = global_dict
-        self.pm = pos_mat
+
+    def len(self):
+        return len(self.fnames)
+        
+    def get(self, idx):
+        pos = ucsv2graph_infomax(self.fnames[idx], self.gd)
+        #neg = ucsv2graph_infomax(self.fnames_neg[idx], self.gd, self.pm)
+        return pos
+
+class WSNDatasetInfomaxSemi(Dataset):
+    def __init__(self, fnames, fnames_neg, global_dict):
+        super(WSNDatasetInfomaxSemi, self).__init__()
+        self.fnames = fnames
+        self.fnn = fnames_neg
+        self.gd = global_dict
         
     def len(self):
         return len(self.fnames)
         
     def get(self, idx):
-        pos = ucsv2graph_infomax(self.fnames[idx], self.gd, self.pm)
-        neg = ucsv2graph_infomax(self.fnames_neg[idx], self.gd, self.pm)
-        return pos, neg
+        original = wcsv2graph_infomax(self.fnames[idx], self.gd)
+        neg = wcsv2graph_infomax(self.fnn[idx], self.gd)
+        return original, neg
+
+class WSNDatasetInfomaxUn(Dataset):
+    def __init__(self, fnames, global_dict):
+        super(WSNDatasetInfomaxUn, self).__init__()
+        self.fnames = fnames
+        self.gd = global_dict
+        
+    def len(self):
+        return len(self.fnames)
+        
+    def get(self, idx):
+        original = wcsv2graph_infomax(self.fnames[idx], self.gd)
+        return original
 
 class SNLDataset(Dataset):
-    def __init__(self, fnames, y, global_dict):
+    def __init__(self, fnames, global_dict, y):
         super(SNLDataset, self).__init__()
         self.fnames = fnames
         self.gd = global_dict
@@ -267,51 +407,15 @@ def deg_distr(train_data):
     return deg
 
 class PositionalEmbedding(nn.Module):
-    def __init__(self, demb):
-        super(PositionalEmbedding, self).__init__()
-
-        self.demb = demb
-
-        self.inv_freq = (1 / ((10000) ** (torch.arange(0.0, demb, 2.0) / demb)))
-
-    def forward(self, pos_seq):
-        sinusoid_inp = torch.ger(pos_seq, self.inv_freq)
+    def __init__(self, d):
+        super().__init__()
+        self.d = d
+        inv_freq = 1 / (10000 ** (torch.arange(0.0, d, 2.0) / d))
+        self.register_buffer("inv_freq", inv_freq)
+        
+    def forward(self, positions: torch.LongTensor, # (seq, )
+               ):
+        # outer product
+        sinusoid_inp = torch.einsum("i,j->ij", positions.float(), self.inv_freq)
         pos_emb = torch.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], dim=-1)
         return pos_emb[:,None,:]
-
-def calc_pos_mat(emb_dim):
-    posemb = PositionalEmbedding(emb_dim)
-    pos_dists = [i for i in np.arange(0, 30)]
-    pos_mat = torch.zeros(60,60)
-    for i in pos_dists:
-        for j in pos_dists:
-            ipos = posemb(torch.tensor([np.float(i)]))[0][0]
-            jpos = posemb(torch.tensor([np.float(j)]))[0][0]
-            pos_mat[int(2*i),int(2*j)] = torch.matmul(ipos, jpos.T)
-    pos_mat = torch.sqrt(pos_mat)
-    return pos_mat
-
-def sequence_dist_matrix(G, N, perturbation, emb_dim, pos_dict):
-    seq_mat = torch.zeros(N, N)
-    posemb = PositionalEmbedding(emb_dim)
-    for node in range(N):
-        for path in nx.all_simple_paths(G, source=perturbation, target=node):
-            for i in path:
-                for j in path:
-                    idx = path.index(i)
-                    jdx = path.index(j)
-                    if seq_mat[i,j] == 0.:
-                        seq_mat[i,j] = pos_dict[(idx),(jdx)]
-                    elif i==j:
-                        seq_mat[i,j] = 1.0
-                    else:
-                        seq_mat[i,j] = 0.5 * (pos_dict[idx,jdx] + seq_mat[i,j])
-                   
-    return seq_mat
-
-def cid(path_list, cell_id):
-    negs = np.empty_like(path_list)
-    for i in tqdm(range(len(cell_id))):
-        a = path_list[cell_id != cell_id[i]]
-        negs[i] = np.random.choice(a, 1)[0]
-    return negs
