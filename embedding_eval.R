@@ -161,7 +161,7 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
       for (k in 1:length(sigs_iden)) {
         filt2 <- filt %>% filter(sig_id == sigs_iden[k])
         filt_embs <- test[which(test$emb %in% filt2$emb),]
-        dup_emb <- sample_n(filt_embs,1)
+        dup_emb <- slice_sample(filt_embs,1)
         dup_embs <- rbind(dup_emb,dup_embs)
       }
       if (nrow(dup_embs)>1) {
@@ -495,32 +495,32 @@ eval_emb <- function(test, file_info, distance_type, file_info_dups, ds_path,lan
   
 
 # file info
-file_info <- readRDS("data/graph_info_df/file_info_nodups.rds")
+file_info <- readRDS("/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/data/graph_info_df/file_info_nodups.rds")
 
 # dup file
 
-file_info_dups <- readRDS("data/graph_info_df/file_info_dups.rds")
+file_info_dups <- readRDS("/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/data/graph_info_df/file_info_dups.rds")
 
 
 
 ###
 distance_type = "cosine"
 ###
-output_dir <- "validation/validation_g2v"
+output_dir <- "/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/validation/validation_transformer_infomax/DGI_DV2_512_seqveq_un_l4/"
 
 
 
 ds_path <- "../GSE92742_Broad_LINCS_Level5_COMPZ.MODZ_n473647x12328.gctx"
 library(tidyverse)
-landmark <- read_tsv(file = "data/cmap/util_files/cmap_landmark_genes.txt")
+landmark <- read_tsv(file = "/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/data/cmap/util_files/cmap_landmark_genes.txt")
 
-sig_mapping <- readRDS("data/graph_info_df/sig_mapping.rds")
+sig_mapping <- readRDS("/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/data/graph_info_df/sig_mapping.rds")
 
 
 
 ### create test embedding df
-
-test <- read.csv("embeddings/graph2vec/emb512_activity.csv")
+library(data.table)
+test <- fread("/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/embeddings/deep_graph_infomax/unsupervised/DGI_JSD_512_seqveq_uniform_un_l4.csv", integer64 = 'double')
 
 #test_files <- as.character(test$X)
 #test_files <- as.data.frame(test_files)
@@ -549,7 +549,7 @@ colnames(test)[1] <- "emb"
 
 
 
-sims <- readRDS("data/rdkit/rdkit_sims.rds")
+sims <- readRDS("/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/data/rdkit/rdkit_sims.rds")
 
 
 eval_emb(test = test, file_info = file_info ,

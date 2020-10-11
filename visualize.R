@@ -25,9 +25,9 @@ prepape_embs <- function(emb, type = "unweighted", file_info, labels, keep_one, 
   return(emb)
 }
 
-file_info <- readRDS("data/graph_info_df/file_info_nodups.rds")
-file_info_dups <- readRDS("data/graph_info_df/file_info_dups.rds")
-emb <- read.csv("embeddings/autoencoder_graph/gt_1024_tl_1_leaky_relu_sum.csv")
+file_info <- readRDS("/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/data/graph_info_df/file_info_nodups.rds")
+file_info_dups <- readRDS("/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/data/graph_info_df/file_info_dups.rds")
+emb <- read.csv("/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/embeddings/deep_graph_infomax/semi_supervised/DGI_JSD_512_GO_semi.csv")
 #test_files <- as.character(emb$X)
 #test_files <- as.data.frame(test_files)
 #test_files <- left_join(test_files,file_info,by = c("test_files"="files_combined"))
@@ -39,7 +39,7 @@ emb <- read.csv("embeddings/autoencoder_graph/gt_1024_tl_1_leaky_relu_sum.csv")
 emb <- emb[,-1]
 colnames(emb)[1] <- "emb"
 #emb <- readRDS("embeddings/ged_distance/ged_embs512_seen_4ep.rds")
-labels <- readRDS("data/cmap/labels/labels_first_pass.rds")
+labels <- readRDS("/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/data/cmap/labels/labels_first_pass.rds")
 emb_proc <- prepape_embs(emb = emb,file_info = file_info,labels = labels,keep_one = F ,ave = T,n_emb = (ncol(emb)-1))
 #emb <- emb_proc
 visualize_moa_emb <- function(emb,output_dir,moa_n,emb_size,perpl_emb,iter,init_dim,name,scale = T){
@@ -70,8 +70,8 @@ visualize_moa_emb <- function(emb,output_dir,moa_n,emb_size,perpl_emb,iter,init_
   dev.off()
 }
 
-visualize_moa_emb(emb_proc,output_dir = "vis",moa_n = 10,emb_size = 1024,
-              perpl_emb = 5,init_dim = 80,iter = 2000,name = "vis_gt_1024_tl_1_leaky_relu_sum", scale = F)
+visualize_moa_emb(emb_proc,output_dir = "/home/rootlocus/Desktop/NTUA/Systems_Biology_Lab/DiplomaThesis/deepSNEM/vis",moa_n = 10,emb_size = 1024,
+              perpl_emb = 5,init_dim = 80,iter = 2000,name = "vis_dgi_jsd_512_semi", scale = F)
 
 
 visualize_moa_genes <- function(emb,output_dir,moa_n,perpl,iter,init_dim,name,ds_path,landmark,sig_map){

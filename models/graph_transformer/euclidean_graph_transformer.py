@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from torch.functional import F
 
+import torch_geometric
 import torch_geometric.transforms as T
 from torch_geometric.utils import to_dense_adj
 
@@ -44,32 +45,44 @@ class MultiHeadGraphAttention(nn.Module):
 
         self.lin_out = nn.Linear(in_channels, in_channels, bias=False)
         
-        self.conv = nn.Conv2d(2, 1, kernel_size=1, stride=1, bias=True)
+        self.conv = nn.Conv2d(3, 1, kernel_size=1, stride=1, bias=True)
         nn.init.uniform_(self.conv.weight.data)
         nn.init.zeros_(self.conv.bias)
 
-        self.param = nn.Parameter(torch.tensor(5.), requires_grad=True).clamp_min(1.).to(dev)
+        self.param = nn.Parameter(torch.tensor(5.), requires_grad=True).clamp_min(1.).cuda()
         self.posemb = PositionalEmbedding(in_channels)
         self.pos_lin = nn.Linear(in_channels, in_channels)
 
     def forward(self, x: torch.Tensor, data: torch.Tensor) -> torch.Tensor:
         q, k, v = self.create_qkv(x)
 
-        data.edge_attr = data.sign
-        adj_w_sign = to_dense_adj(data.edge_index, None, edge_attr=data.edge_attr)
-
+        data.edge_attr = torch.cat((data.sign, data.weight.view(-1,1)), dim=-1)
         #Scaled Dot Product Attention of Heads
         #self.attn_logits = ((q**2).sum(-1).view(self.n_heads,-1,1) + (k**2).sum(-1).view(self.n_heads,1,-1))  - 2.* torch.bmm(q, k.transpose(-2,-1))
         cont_attn = torch.matmul(q, k.transpose(-2,-1))
-        if data.seq_mat is not None:
+        if hasattr(data, 'seq_mat'):
             pos = self.pos_lin(self.posemb(data.seq_mat))
             pos = pos.view(self.n_heads, data.seq_mat.shape[0], -1, self.depth)
             pos_attn = torch.einsum('hik,hijk->hij',q,pos)
             self.attn_logits = torch.add(cont_attn,pos_attn) / np.sqrt(self.in_channels)
         else:
             self.attn_logits = cont_attn/np.sqrt(self.in_channels)
-        conv_s = adj_w_sign.view(1,2,adj_w_sign.size(-2),-1)
 
+        if isinstance(data, torch_geometric.data.Batch):
+            adj_w_sign = to_dense_adj(data.edge_index, data.batch, edge_attr=data.edge_attr)
+            mask = torch.zeros_like(self.attn_logits)
+            cum = np.cumsum(data.__num_nodes_list__)
+            j = 0
+            mask = torch.zeros(data.num_nodes, data.num_nodes)
+            for i in cum:
+                mask[j:i,j:i] = 1.
+                j = i
+            mask[mask==0] = -np.inf
+            self.attn_logits = torch.add(self.attn_logits, mask.cuda())
+
+        adj_w_sign = to_dense_adj(data.edge_index, None, edge_attr=data.edge_attr)
+        
+        conv_s = adj_w_sign.view(1,3,adj_w_sign.size(-2),-1)
         self.attn_logits = torch.add(self.attn_logits, self.param * self.conv(conv_s))
         
         self.attn_logits = F.softmax(self.attn_logits, dim=-1)
@@ -80,7 +93,7 @@ class MultiHeadGraphAttention(nn.Module):
         attn_out = self.lin_out(attn_out)
         attn_out = F.dropout(attn_out, training=self.training, p=0.1)
 
-        return attn_out
+        return attn_out, self.attn_logits
         
     def split_heads(self, mat : torch.Tensor) -> torch.Tensor:
         return mat.view(self.n_heads, -1, self.depth)
@@ -144,7 +157,7 @@ class GraphTransformerEncoderLayer(nn.Module):
     def forward(self, x, data):
         
         # Perform Multi Head Attention
-        attn_out = self.mhga(x, data)
+        attn_out, self.attn_logits = self.mhga(x, data)
 
         # Add and Norm
         out1 = self.lnorm1(torch.add(x,attn_out))
@@ -209,7 +222,10 @@ class GraphTransformerEncoder(nn.Module):
 
         x = self.emb_layer(global_idx)
         act = self.pe(data)
+        #st = data.struct_embs
+
         x = torch.add(x, act)
+        #x = torch.add(x, st)
 
         #x = self.transformer_1(x, data)
         for t in self.transformers:
@@ -224,21 +240,21 @@ class GraphTransformerEncoder(nn.Module):
         global_idx = data.global_idx
 
         x = self.emb_layer(global_idx)
-        act = self.pe(data)
+        act = self.pe(data.corr_acts)       
         x = torch.add(x, act)
-        x = x[torch.randperm(x.size(0))]
 
         data.edge_index[1] = data.edge_index[1][torch.randperm(data.edge_index[1].size(0))]
-        data.seq_mat = data.seq_mat[torch.randperm(data.seq_mat.size(0))]
-        data.seq_mat = data.seq_mat[torch.randperm(data.seq_mat.size(1))]
 
         for t in self.transformers:
             x = t(x, data)
+            data.sign = torch.zeros_like(data.sign)
+            data.weight = torch.zeros_like(data.weight)
+            data.acts = torch.zeros_like(data.acts)
 
         return x
 
-    def summarize(self, x):
-        summary = self.summarizer(x)
+    def summarize(self, x, batch=None):
+        summary = self.summarizer(x, batch)
         return summary
 #-----------------------------------------------------------------------------------------------    
 #-----------------------------------------------------------------------------------------------
@@ -251,6 +267,14 @@ class MultipleOptimizer:
     def zero_grad(self):
         for op in self.optimizers:
             op.zero_grad()
+
+    def step(self):
+        for op in self.optimizers:
+            op.step()
+
+class MultipleScheduler:
+    def __init__(self, *op):
+        self.optimizers = op
 
     def step(self):
         for op in self.optimizers:

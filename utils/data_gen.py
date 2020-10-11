@@ -2,9 +2,8 @@ from __future__ import absolute_import, division
 import torch
 import torch.nn as nn
 from torch.functional import F
-from torch.functional import F
-from torch_geometric.data import Dataset
-from torch_geometric.utils import from_networkx, degree, to_networkx, negative_sampling, add_self_loops
+from torch_geometric.data import Dataset, Data
+from torch_geometric.utils import from_networkx, degree, to_networkx, negative_sampling, add_self_loops, to_undirected
 
 from torch_sparse import coalesce
 
@@ -16,6 +15,11 @@ from tqdm.auto import tqdm
 
 from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler, Normalizer, RobustScaler, StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.utils.class_weight import compute_class_weight
+
+from karateclub.utils.treefeatures import WeisfeilerLehmanHashing
+from karateclub.node_embedding import Role2Vec
 
 def to_categorical(y, num_classes):
     """ 1-hot encodes a tensor """
@@ -119,6 +123,11 @@ def wcsv2graph_infomax(fname, global_dict):
     G = nx.from_pandas_edgelist(sample, source='node1', target='node2', 
                             edge_attr=['sign', 'weight'], create_using=nx.DiGraph())
 
+    data1 = from_networkx(G)
+    G1 = to_networkx(data1)
+    rv = Role2Vec(dimensions=512, workers=-1, seed=69)
+    rv.fit(G1.to_undirected())
+
     n1a1d = sample[['node1','downact1']]
     n1a1u = sample[['node1','upact1']]
     n1a1d.columns = ['node','downact']
@@ -148,14 +157,16 @@ def wcsv2graph_infomax(fname, global_dict):
     data = from_networkx(G)
 
     G = to_networkx(data)
-    aps = nx.floyd_warshall_numpy(G)
-    aps[aps == np.inf] = 0.
-    aps = torch.FloatTensor(aps)
+    rv = Role2Vec(dimensions=512, workers=-1, seed=69)
+    rv.fit(G.to_undirected())
+    #aps = nx.floyd_warshall_numpy(G)
+    #aps[aps == np.inf] = 0.
+    #aps = torch.FloatTensor(aps)
 
-    G1 = G.reverse()
-    aps_r = nx.floyd_warshall_numpy(G1)
-    aps_r[aps_r == np.inf] = 0.
-    aps_r = torch.FloatTensor(aps_r)
+    #G1 = G.reverse()
+    #aps_r = nx.floyd_warshall_numpy(G1)
+    #aps_r[aps_r == np.inf] = 0.
+    #aps_r = torch.FloatTensor(aps_r)
 
     data.weight = data.weight.float()
     data.downacts, data.upacts = data.downacts.double(), data.upacts.float()
@@ -166,7 +177,9 @@ def wcsv2graph_infomax(fname, global_dict):
     data.sign = data.sign.long()
     data.sign = to_categorical(data.sign, 2).reshape(-1,2).float()
 
-    data.seq_mat = torch.add(aps, aps_r)
+    data.r2v = torch.tensor(rv.get_embedding())
+
+    #data.seq_mat = torch.add(aps, aps_r)
     
     return data
 
@@ -241,7 +254,7 @@ def ucsv2graph(fname, global_dict):
     
     return data
 
-def ucsv2graph_infomax(fname, global_dict):
+def ucsv2graph_infomax(fname, global_dict, sig_one_hot=None, y=None):
     """
     Unweighted Graph Creator
     """
@@ -267,14 +280,6 @@ def ucsv2graph_infomax(fname, global_dict):
     data = from_networkx(G)
     
     G = to_networkx(data)
-    aps = nx.floyd_warshall_numpy(G)
-    aps[aps == np.inf] = 0.
-    aps = torch.FloatTensor(aps)
-
-    G1 = G.reverse()
-    aps_r = nx.floyd_warshall_numpy(G1)
-    aps_r[aps_r == np.inf] = 0.
-    aps_r = torch.FloatTensor(aps_r)
 
     data.acts[data.acts < 0] = 0
     data.acts = to_categorical(data.acts, 2).reshape(-1,2).long()
@@ -282,7 +287,17 @@ def ucsv2graph_infomax(fname, global_dict):
     data.sign[data.sign < 0] = 0
     data.sign = to_categorical(data.sign, 2).reshape(-1,2).float()
 
-    data.seq_mat = torch.add(aps, aps_r)
+    data.weight = torch.ones(data.num_edges)
+
+    if sig_one_hot is not None:
+        data.sig = torch.tensor(sig_one_hot)
+        data.node_sig = data.sig.view(1,-1).repeat(data.num_nodes,1)
+
+    if y is not None:
+        data.y = y
+        data.node_y = data.y.view(-1,1).repeat(data.num_nodes,1)
+
+    #data.seq_mat = torch.add(aps, aps_r)
 
     return data
 
@@ -344,67 +359,49 @@ class SNDatasetAuto(Dataset):
     def get(self, idx):
         return ucsv2graph(self.fnames[idx], self.gd)
 
-class SNDatasetInfomax(Dataset):
+class WSNDataset(Dataset):
     def __init__(self, fnames, global_dict):
+        super(WSNDataset, self).__init__()
+        self.fnames = fnames
+        self.gd = global_dict
+        
+    def len(self):
+        return len(self.fnames)
+        
+    def get(self, idx):
+        return wcsv2graph_infomax(self.fnames[idx], self.gd)
+
+class SNDatasetInfomax(Dataset):
+    def __init__(self, fnames, global_dict, sig_id_one_hot=None):
         super(SNDatasetInfomax, self).__init__()
         self.fnames = fnames
         self.gd = global_dict
+        self.sig_id = sig_id_one_hot
 
     def len(self):
         return len(self.fnames)
         
     def get(self, idx):
-        pos = ucsv2graph_infomax(self.fnames[idx], self.gd)
-        #neg = ucsv2graph_infomax(self.fnames_neg[idx], self.gd, self.pm)
-        return pos
+        if self.sig_id is not None:
+            data = ucsv2graph_infomax(self.fnames[idx], self.gd, self.sig_id[idx])
+        else:
+            data = ucsv2graph_infomax(self.fnames[idx], self.gd)
+        return data
 
-class WSNDatasetInfomaxSemi(Dataset):
-    def __init__(self, fnames, fnames_neg, global_dict):
-        super(WSNDatasetInfomaxSemi, self).__init__()
+class SNDatasetInfomaxSemi(Dataset):
+    def __init__(self, fnames, global_dict, sig_one_hot, y):
+        super(SNDatasetInfomaxSemi, self).__init__()
         self.fnames = fnames
-        self.fnn = fnames_neg
-        self.gd = global_dict
-        
-    def len(self):
-        return len(self.fnames)
-        
-    def get(self, idx):
-        original = wcsv2graph_infomax(self.fnames[idx], self.gd)
-        neg = wcsv2graph_infomax(self.fnn[idx], self.gd)
-        return original, neg
-
-class WSNDatasetInfomaxUn(Dataset):
-    def __init__(self, fnames, global_dict):
-        super(WSNDatasetInfomaxUn, self).__init__()
-        self.fnames = fnames
-        self.gd = global_dict
-        
-    def len(self):
-        return len(self.fnames)
-        
-    def get(self, idx):
-        original = wcsv2graph_infomax(self.fnames[idx], self.gd)
-        return original
-
-class SNLDataset(Dataset):
-    def __init__(self, fnames, global_dict, y):
-        super(SNLDataset, self).__init__()
-        self.fnames = fnames
+        self.sig_id = sig_one_hot
         self.gd = global_dict
         self.y = y
-        
+
     def len(self):
         return len(self.fnames)
         
     def get(self, idx):
-        return wcsv2graph(self.fnames[idx], self.gd, self.y[idx])
-
-def deg_distr(train_data):
-    deg = torch.zeros(58, dtype=torch.long)
-    for data in tqdm(train_data):
-        d = degree(data.edge_index[0], num_nodes=data.num_nodes, dtype=torch.long)
-        deg += torch.bincount(d, minlength=58)
-    return deg
+        data = ucsv2graph_infomax(self.fnames[idx], self.gd, self.sig_id[idx], self.y[idx])
+        return data
 
 class PositionalEmbedding(nn.Module):
     def __init__(self, d):
@@ -419,3 +416,10 @@ class PositionalEmbedding(nn.Module):
         sinusoid_inp = torch.einsum("i,j->ij", positions.float(), self.inv_freq)
         pos_emb = torch.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], dim=-1)
         return pos_emb[:,None,:]
+
+    def __init__(self, seq_mat):
+        super(SigNetData, self).__init__()
+        self.seq_mat = seq_mat
+
+    def none(self):
+        pass

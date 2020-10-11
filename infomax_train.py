@@ -7,6 +7,8 @@ import pandas as pd
 import math
 import re
 import sys
+import random
+import os
 sys.path.append('..')
 
 import torch
@@ -14,15 +16,28 @@ import torch.nn as nn
 from torch.functional import F
 
 from torch_geometric.data import Data, DataLoader, Dataset
+from torch_geometric.nn import Set2Set
+from torch_geometric.utils.metric import accuracy, precision, f1_score
 
 from tqdm.auto import tqdm
+from sklearn.preprocessing import OneHotEncoder 
+from sklearn.utils.class_weight import compute_class_weight
 
-from models.deep_graph_infomax.infomax import DeepGraphInfomax
-from models.graph_transformer.euclidean_graph_transformer import GraphTransformerEncoder, MultipleOptimizer
-from utils.data_gen import WSNDatasetInfomaxUn, load_prot_embs, load_prot_embs_go, SNDatasetInfomax, WSNDatasetInfomaxSemi
-from models.infograph_semi_supervised.infomax import get_positive_expectation, get_negative_expectation
+from models.deep_graph_infomax.infomax import SNInfomax
+from models.graph_transformer.euclidean_graph_transformer import GraphTransformerEncoder, MultipleOptimizer, MultipleScheduler
+from utils.data_gen import load_prot_embs, load_prot_embs_go, SNDatasetInfomax, SNDatasetInfomaxSemi
+
+from captum.attr import IntegratedGradients
 
 torch.backends.cudnn.benchmark = True
+
+def seed_everything(seed=42):
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    torch.backends.cudnn.benchmark = False
 
 # Arguments Parser
 parser = argparse.ArgumentParser(description='Transformer training hyperparameters.')
@@ -34,77 +49,72 @@ parser.add_argument('--n_layers', type=int, help='Number of transformer layers',
 
 parser.add_argument('--epochs', type=int, help='Number of epochs to train', default=1)
 parser.add_argument('--batch_size', metavar='BS', type=int, help='Batch size', default=1)
-parser.add_argument('--graph_data_type', type=str, help='W, U or None', default='U')
-parser.add_argument('--task', type=str, help='semi or un', default='un')
+parser.add_argument('--task', type=str, help='un or semi', default='un')
 
 args = parser.parse_args()
 
 # Load Global Dict and prot embeddings
 SIZE = args.emb_dim
+BS = args.batch_size
 EMB_DIM = args.emb_dim
 EPOCHS = args.epochs
 TYPE = args.emb_type
-GT = args.graph_data_type
 TASK = args.task
+SEMI = False if TASK=='un' else True
 
 prot_embs, global_dict = load_prot_embs(SIZE, norm=False) if TYPE=='seqveq' else load_prot_embs_go(SIZE, norm=False)
+if TYPE=='random':
+    prot_embs = None
 
 # Load Weighted, Unweighted and SemiSupervision Dataset
-unweighted_fnames = 'data/graph_info_df/samples_all.csv'
-u_fnames = pd.read_csv(unweighted_fnames)
-u_path_list = u_fnames.path_list.to_numpy()
+oh = OneHotEncoder()
+#oh_drugs = OneHotEncoder()
 
-w_path_list = 'data/graph_info_df/file_info_weighted.csv'
-w_fnames = pd.read_csv(w_path_list)
-w_path_list = w_fnames.files_weighted.to_numpy()
+if SEMI:
+    print('-' * 100)
+    print('Creating Semi Supervised Dataset...')
 
-semi_path_list = 'data/graph_info_df/semi_infomax_pos_neg_triads.csv'
-semi_fnames = pd.read_csv(semi_path_list)
-sig = semi_fnames.sig.to_numpy()
-neg = semi_fnames.neg.to_numpy()
+    all_semi = pd.read_csv('data/graph_info_df/semi_dataset.csv')
+    u_path_list = all_semi.files_combined.values
+    all_moas = all_semi.moa_v1.values
+    moa_v1 = all_moas[all_semi.moa_v1 != 'Unknown']
+    labels = all_semi.sigs_g.to_numpy().reshape(-1,1)
+    labels = oh.fit_transform(labels).toarray()
+    moas = smooth_dataset(moa_v1, all_moas, 255, 0.1)
+    train_data = SNDatasetInfomaxSemi(u_path_list, global_dict, labels, moas)
+else:
+    u_fnames = pd.read_csv('data/graph_info_df/full_dataset.csv')
+    u_path_list = u_fnames.files_combined.to_numpy()
+    labels = u_fnames.sigs_g.to_numpy().reshape(-1,1)
+    labels = oh.fit_transform(labels).toarray()
+    #pert_id = u_fnames.pert_id.to_numpy().reshape(-1,1)
+    #pert_id = oh_drugs.fit_transform(pert_id).toarray()
 
-pn = WSNDatasetInfomaxUn(w_path_list, global_dict) if GT=='W' else SNDatasetInfomax(u_path_list, global_dict)
-if TASK=='semi':
-    pn = WSNDatasetInfomaxSemi(sig, neg, global_dict)
-train_loader = DataLoader(pn, batch_size=1, num_workers=12, shuffle=True)
+    train_data = SNDatasetInfomax(u_path_list, global_dict, labels)
+
+train_loader = DataLoader(train_data, batch_size=BS, num_workers=12, shuffle=True)
 
 # Network
 dev = torch.device('cuda')
 
+summarizer = Set2Set(args.emb_dim, 3)
 encoder = GraphTransformerEncoder(n_layers=args.n_layers, n_heads=args.n_heads, n_hid=EMB_DIM, 
                             pretrained_weights=prot_embs).to(dev)
 
-model = DeepGraphInfomax(hidden_channels=args.emb_dim, encoder=encoder,
-                                     summary=lambda z, *args, **kwargs: z.mean(dim=0)).to(dev)
-
+model = SNInfomax(hidden_channels=args.emb_dim, encoder=encoder,
+                                     summary=summarizer, semi=SEMI).to(dev)
 
 # Training Hyperparameters
 lr_sparse = 1e-4
 lr = 1e-4
 optimizer_sparse = torch.optim.SparseAdam(model.encoder.emb_layer.parameters(), lr=lr_sparse)
-optimizer_dense = torch.optim.AdamW(list(model.encoder.parameters())[1:], lr=lr)
+optimizer_dense = torch.optim.AdamW(list(model.parameters())[1:], lr=lr)
 
-if TASK=='semi':
-    encoder2 = GraphTransformerEncoder(n_layers=args.n_layers, n_heads=args.n_heads, n_hid=EMB_DIM, 
-                            pretrained_weights=prot_embs).to(dev)
+scheduler_dense = torch.optim.lr_scheduler.StepLR(optimizer_dense, step_size=4, gamma=0.05)
+scheduler_sparse = torch.optim.lr_scheduler.StepLR(optimizer_sparse, step_size=4, gamma=0.05)
 
-    model2 = DeepGraphInfomax(hidden_channels=args.emb_dim, encoder=encoder,
-                                     summary=lambda z, *args, **kwargs: z.mean(dim=0)).to(dev)
-    model.load_state_dict(torch.load('embeddings/deep_graph_infomax/GO_dgi_512_tl_1_un.pt'))
-    model2.load_state_dict(torch.load('embeddings/deep_graph_infomax/GO_dgi_512_tl_1_un.pt'))
-    print('-' * 100)
-    print('Keys Loaded Succesfully!')
-    print('-' * 100)
-    optimizer_sparse2 = torch.optim.SparseAdam(model2.encoder.emb_layer.parameters(), lr=lr_sparse)
-    optimizer_dense2 = torch.optim.AdamW(list(model2.encoder.parameters())[1:], lr=lr)
-
-    optimizer = MultipleOptimizer(optimizer_sparse, optimizer_dense, optimizer_sparse2, optimizer_dense2)
-
-scheduler_dense = torch.optim.lr_scheduler.StepLR(optimizer_dense, step_size=1, gamma=0.05)
-scheduler_sparse = torch.optim.lr_scheduler.StepLR(optimizer_sparse, step_size=1, gamma=0.05)
-if TASK != 'semi':
-    optimizer = MultipleOptimizer(optimizer_sparse, optimizer_dense)
-#optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+optimizer = MultipleOptimizer(optimizer_sparse, optimizer_dense)
+scheduler = MultipleScheduler(scheduler_sparse, scheduler_dense)
 
 def train(epoch):
     model.train()
@@ -112,94 +122,47 @@ def train(epoch):
         tb = tb.to(dev)
         optimizer.zero_grad()
 
-        pos_z, neg_z, summary = model(tb)
+        res, summary = model(tb)
+        local, prior = model.loss(res, summary)
+        loss = local + prior
 
-        #pos_loss = -torch.log(
-            #model.discriminate(pos_z, summary, sigmoid=True) + 1e-5).mean()
-        #neg_loss = -torch.log(
-            #1 - model.discriminate(neg_z, summary, sigmoid=True) + 1e-5).mean()
-        
-        pos_loss = get_positive_expectation(model.discriminate(pos_z, summary, fd=False), 'JSD')
-        neg_loss = get_negative_expectation(model.discriminate(neg_z, summary, fd=False), 'JSD')
-
-        loss = neg_loss - pos_loss
-
-        train_data_iterator.set_postfix(Epoch=epoch+1, MI ='%.4f' % float(loss.item()))
+        train_data_iterator.set_postfix(Epoch=epoch+1, MI ='%.4f' % float(loss.item()), 
+                                        local_loss ='%.4f' % float(local.item()),
+                                        prior_loss ='%.4f' % float(prior.item()))
+        #train_data_iterator.set_postfix(Epoch=epoch+1, MI ='%.4f' % float(loss.item()))
 
         loss.backward(retain_graph=True)
         #torch.nn.utils.clip_grad_norm_(model.encoder.emb_layer.parameters(), 0.05)
-
         optimizer.step()
 
         del tb
     
-    scheduler_dense.step()
-    scheduler_sparse.step()
+    scheduler.step()
 
-def train_semi(epoch):
-    model.train()
-    for tb, nb in train_data_iterator:
-        tb = tb.to(dev)
-        nb = nb.to(dev)
-        optimizer.zero_grad()
-
-        sig_z_un, neg_z_un, summary_un = model2(tb)
-        sig_z, _, summary = model(tb)
-        neg_z, _, _ = model(nb)
-        l = 1e-3
-
-        # Supervised Losses
-        sig_loss = get_positive_expectation(model.discriminate(sig_z, summary, fd=False), 'JSD')
-        neg_sig_loss = get_negative_expectation(model.discriminate(neg_z, summary, fd=False), 'JSD')
-        # Unsupervised Losses
-        pos_un_loss = get_positive_expectation(model2.discriminate(sig_z_un, summary_un, fd=False), 'JSD')
-        neg_un_loss = get_negative_expectation(model2.discriminate(neg_z_un, summary_un, fd=False), 'JSD')
-        # Global Embedding Losses
-        mul = torch.matmul(summary, summary_un)
-        pos_glob_loss = get_positive_expectation(mul, 'JSD', average=False)
-        neg_glob_loss = get_negative_expectation(mul, 'JSD', average=False)
-
-        loss = neg_sig_loss - sig_loss + neg_un_loss - pos_un_loss + l*(neg_glob_loss - pos_glob_loss)
-
-        train_data_iterator.set_postfix(Epoch=epoch+1, MI ='%.4f' % float(loss.item()))
-
-        loss.backward(retain_graph=True)
-        #torch.nn.utils.clip_grad_norm_(model.encoder.emb_layer.parameters(), 0.05)
-
-        optimizer.step()
-
-        del tb
-    
-    scheduler_dense.step()
-    scheduler_sparse.step()
+print(f'Training with task: {TASK}')
 
 for epoch in range(EPOCHS):
     print('-' * 100)
-    print(f'Training with task: {TASK}')
-    #negs = cid(u_path_list, cellid)
-    #print('Done!')
+    print(f'SparseAdam Learning Rate: {lr_sparse}')
+    print(f'AdamW Learning Rate: {lr}')
     print('-' * 100)
-    print('Starting training...')
-    train_data_iterator = tqdm(train_loader, leave=True, unit='batch', postfix={'Epoch': epoch+1,'MI': '%.4f' % 0.0,})
-    if TASK=='semi':
-        train_semi(epoch)
-    else:
-        train(epoch)
-    #torch.save(model.state_dict(), f'embeddings/deep_graph_infomax/dgi_{args.emb_dim}_tl_{args.n_layers}_epoch_{epoch+1}.pt')
-    #val_data_iterator = tqdm(val_loader, leave=True, unit='batch', postfix={'Epoch': epoch+1,'MI_val': '%.4f' % 0.0,})
-    #eval(epoch)
+    print(f'Now on Epoch {epoch}')
+    print('-' * 100)
 
-torch.save(model.state_dict(), f'embeddings/deep_graph_infomax/{GT}_dgi_{args.emb_dim}_tl_{args.n_layers}_{TASK}.pt')
+    train_data_iterator = tqdm(train_loader, leave=True, unit='batch', postfix={'Epoch': epoch+1,'MI': '%.4f' % 0.0,})
+    train(epoch)
+
+torch.save(model.state_dict(), f'embeddings/deep_graph_infomax/unsupervised/DGI_JSD_{args.emb_dim}_{TYPE}_uniform_{TASK}.pt')
 
 def eval(epoch):
     model.eval()
-    for vb in val_data_iterator:
-        vb = vb.to(dev)
+    for vbs in val_data_iterator:
+        vbs = vb.to(dev)
+        y_true_val = vbs.label
+        vbun = vbun.to(dev)
         with torch.no_grad():
-            pos_z, neg_z, summary = model(vb)
 
-            loss = model.loss(pos_z, neg_z, summary).item()
-
-            val_data_iterator.set_postfix(Epoch=epoch+1, MI_val ='%.4f' % float(loss))
-
-        del vb
+            _,_,preds_val = semi_infomax(vb)
+            acc_v = accuracy(torch.argmax(preds, dim=1), y_true)
+            prec_v = precision(torch.argmax(preds, dim=1), y_true, 255).mean()
+            val_data_iterator.set_postfix(Epoch=epoch+1, val_acc = '%.4f' % float(acc_v), val_prec='%.4f' % float(prec_v))

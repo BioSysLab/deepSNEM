@@ -23,7 +23,7 @@ from tqdm.auto import tqdm
 
 from models.graph_transformer.euclidean_graph_transformer import GraphTransformerEncoder, PostEncoding, MultipleOptimizer
 from models.graph_transformer.autoencoder_base import DeepSNEM, LinearDecoder, FermiDiracDecoder, pdist, get_edge_dists, reshape_probs
-from utils.data_gen import ucsv2graph, SNDatasetAuto, SNLDataset, load_prot_embs, load_prot_embs_go
+from utils.data_gen import ucsv2graph, SNDatasetAuto, load_prot_embs, load_prot_embs_go
 
 torch.backends.cudnn.benchmark = True
 
@@ -54,17 +54,6 @@ prot_embs, global_dict = load_prot_embs(SIZE, norm=False) if TYPE=='seqveq' else
 unweighted_fnames = 'data/graph_info_df/samples_all.csv'
 u_fnames = pd.read_csv(unweighted_fnames)
 u_path_list = u_fnames.path_list.to_numpy()
-us_cellid = []
-for us in u_path_list:
-    x = re.split('_', us)
-    us_cellid.append(x[2])
-u_fnames['cell_id'] = us_cellid
-u_cellid = np.array(us_cellid)
-
-w_path_list = 'data/graph_info_df/file_info_weighted.csv'
-w_fnames = pd.read_csv(w_path_list)
-w_path_list = w_fnames.files_weighted.to_numpy()
-w_cellid = np.array(w_fnames['cell_id'].values)
 
 print('-' * 100)
 print('Dataset Succesfully Loaded!')
@@ -73,8 +62,8 @@ print('-' * 100)
 
 pl = u_path_list if GT=='U' else w_path_list
 X, val = train_test_split(pl, test_size=0.3)
-train_data = SNDatasetAuto(X, global_dict) if GT=='U' else SNLDataset(pl, global_dict, np.zeros_like(pl))
-val_data = SNDatasetAuto(val, global_dict) if GT=='U' else SNLDataset(val, global_dict, np.zeros_like(val))
+train_data = SNDatasetAuto(X, global_dict) 
+val_data = SNDatasetAuto(val, global_dict)
 
 train_loader = DataLoader(train_data, batch_size=args.batch_size, num_workers=12, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=args.batch_size, num_workers=6)
