@@ -209,16 +209,7 @@ def ucsv2graph(fname, global_dict):
     data = from_networkx(G)
     
     G = to_networkx(data)
-    aps = nx.floyd_warshall_numpy(G)
-    aps[aps == np.inf] = 0.
-    aps = torch.FloatTensor(aps)
 
-    G1 = G.reverse()
-    aps_r = nx.floyd_warshall_numpy(G1)
-    aps_r[aps_r == np.inf] = 0.
-    aps_r = torch.FloatTensor(aps_r)
-    G = G.to_undirected()
-    
     neighbors = {}
     for g in G.nodes():
         neighbors[g] = [n for n in G.neighbors(g)]
@@ -250,8 +241,8 @@ def ucsv2graph(fname, global_dict):
     data.pos_childs = data_2.pos_childs
     data.neg_childs = data_3.neg_childs
 
-    data.seq_mat = torch.add(aps, aps_r)
-    
+    data.weight = torch.ones_like(data.edge_index[0])
+
     return data
 
 def ucsv2graph_infomax(fname, global_dict, sig_one_hot=None, y=None):

@@ -52,7 +52,7 @@ class PriorDiscriminator(torch.nn.Module):
 
 class SNInfomax(torch.nn.Module):
 
-    def __init__(self, hidden_channels, encoder, summary, semi=False, beta=0.1):
+    def __init__(self, hidden_channels, encoder, summary, semi=False, beta=1.0):
         super(SNInfomax, self).__init__()
         self.hidden_channels = hidden_channels
         self.encoder = encoder
