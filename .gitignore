@@ -46,6 +46,7 @@ __pycache__/
 =======
 .Rproj.user
 .ipynb_checkpoints
+.vim/
 
 /data/CARNIVAL_scripts
 /data/weighted graphs/

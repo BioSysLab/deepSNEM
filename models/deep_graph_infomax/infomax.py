@@ -73,7 +73,6 @@ class SNInfomax(torch.nn.Module):
         reset(self.summary)
 
     def init_emb(self):
-      initrange = -1.5 / self.hidden_channels
       for m in self.modules():
           if isinstance(m, torch.nn.Linear):
               torch.nn.init.xavier_uniform_(m.weight.data)
@@ -83,7 +82,7 @@ class SNInfomax(torch.nn.Module):
     def forward(self, data):
         #neg_z = self.encoder.corrupt_forward(data)
         z = self.encoder(data)
-        summary = self.summary(z, data.batch) if hasattr(data, 'batch') else self.summary(pos_z)
+        summary = self.summary(z, data.batch) if hasattr(data, 'batch') else self.summary(z)
         mask = torch.matmul(data.node_sig, data.sig.view(data.num_graphs, -1).t()).bool()
         self.pos_mask = mask.float()
         self.neg_mask = (~mask).float()
