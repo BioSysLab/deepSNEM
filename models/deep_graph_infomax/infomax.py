@@ -5,10 +5,10 @@ import torch.nn.functional as F
 import math
 
 from models.graph_transformer.euclidean_graph_transformer import GraphTransformerEncoder
-
-from .inits import reset, uniform
+from models.deep_graph_infomax.inits import reset, uniform
 
 EPS = 1e-15
+
 
 def log_sum_exp(x, axis=None):
     """Log sum exp function
@@ -22,8 +22,9 @@ def log_sum_exp(x, axis=None):
     y = torch.log((torch.exp(x - x_max)).sum(axis)) + x_max
     return y
 
+
 class LocalDiscriminator(torch.nn.Module):
-    def __init__(self,input_dim, dim):
+    def __init__(self, input_dim, dim):
         super().__init__()
         self.block = torch.nn.Sequential(
             torch.nn.Linear(input_dim, input_dim),
@@ -38,6 +39,7 @@ class LocalDiscriminator(torch.nn.Module):
     def forward(self, x):
         return self.block(x) + self.linear_shortcut(x)
 
+
 class PriorDiscriminator(torch.nn.Module):
     def __init__(self, input_dim):
         super().__init__()
@@ -49,6 +51,7 @@ class PriorDiscriminator(torch.nn.Module):
         h = F.relu(self.l0(x))
         h = F.relu(self.l1(h))
         return torch.sigmoid(self.l2(h))
+
 
 class SNInfomax(torch.nn.Module):
 
@@ -73,24 +76,26 @@ class SNInfomax(torch.nn.Module):
         reset(self.summary)
 
     def init_emb(self):
-      for m in self.modules():
-          if isinstance(m, torch.nn.Linear):
-              torch.nn.init.xavier_uniform_(m.weight.data)
-              if m.bias is not None:
-                  m.bias.data.fill_(0.0)
+        for m in self.modules():
+            if isinstance(m, torch.nn.Linear):
+                torch.nn.init.xavier_uniform_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.fill_(0.0)
 
     def forward(self, data):
         #neg_z = self.encoder.corrupt_forward(data)
         z = self.encoder(data)
-        summary = self.summary(z, data.batch) if hasattr(data, 'batch') else self.summary(z)
-        mask = torch.matmul(data.node_sig, data.sig.view(data.num_graphs, -1).t()).bool()
+        summary = self.summary(z, data.batch) if hasattr(
+            data, 'batch') else self.summary(z)
+        mask = torch.matmul(data.node_sig, data.sig.view(
+            data.num_graphs, -1).t()).bool()
         self.pos_mask = mask.float()
         self.neg_mask = (~mask).float()
 
         z_un = self.local_d(z)
         summary_un = self.global_d(summary)
 
-        res_un = torch.matmul(z_un, summary_un.t()) 
+        res_un = torch.matmul(z_un, summary_un.t())
 
         return res_un, summary
 
@@ -102,7 +107,7 @@ class SNInfomax(torch.nn.Module):
 
         Ep = log_2 - F.softplus(- p_samples)
         Eq = F.softplus(-q_samples) + q_samples - log_2
-        
+
         Ep = (Ep * self.pos_mask).sum() / self.pos_mask.sum()
         Eq = (Eq * self.neg_mask).sum() / self.neg_mask.sum()
         LOCAL = Eq - Ep
