@@ -1,12 +1,12 @@
-import numpy as np
 import math
+from typing import Optional, Tuple
 
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.functional import F
-
 import torch_geometric
 import torch_geometric.transforms as T
+from torch.functional import F
 from torch_geometric.utils import to_dense_adj
 
 dev = torch.device('cuda:0')
@@ -20,7 +20,7 @@ class PositionalEmbedding(nn.Module):
         self.d = d
         inv_freq = 1 / (10000 ** (torch.arange(0.0, d, 2.0) / d))
         self.register_buffer("inv_freq", inv_freq)
-        
+
     def forward(self, positions: torch.LongTensor, # (seq, )
                ):
         # outer product
@@ -44,7 +44,7 @@ class MultiHeadGraphAttention(nn.Module):
         self.wv = nn.Linear(in_channels, in_channels, bias=False)
 
         self.lin_out = nn.Linear(in_channels, in_channels, bias=False)
-        
+
         self.conv = nn.Conv2d(3, 1, kernel_size=1, stride=1, bias=True)
         nn.init.uniform_(self.conv.weight.data)
         nn.init.zeros_(self.conv.bias)
@@ -53,7 +53,7 @@ class MultiHeadGraphAttention(nn.Module):
         self.posemb = PositionalEmbedding(in_channels)
         self.pos_lin = nn.Linear(in_channels, in_channels)
 
-    def forward(self, x: torch.Tensor, data: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, data: torch.Tensor) -> Tuple[torch.Tensor,torch.Tensor]:
         q, k, v = self.create_qkv(x)
 
         data.edge_attr = torch.cat((data.sign, data.weight.view(-1,1)), dim=-1)
@@ -81,10 +81,10 @@ class MultiHeadGraphAttention(nn.Module):
             self.attn_logits = torch.add(self.attn_logits, mask.cuda())
 
         adj_w_sign = to_dense_adj(data.edge_index, None, edge_attr=data.edge_attr)
-        
+
         conv_s = adj_w_sign.view(1,3,adj_w_sign.size(-2),-1)
         self.attn_logits = torch.add(self.attn_logits, self.param * self.conv(conv_s))
-        
+
         self.attn_logits = F.softmax(self.attn_logits, dim=-1)
 
         attn_out = torch.matmul(self.attn_logits, v)
@@ -94,16 +94,16 @@ class MultiHeadGraphAttention(nn.Module):
         attn_out = F.dropout(attn_out, training=self.training, p=0.1)
 
         return attn_out, self.attn_logits
-        
+
     def split_heads(self, mat : torch.Tensor) -> torch.Tensor:
         return mat.view(self.n_heads, -1, self.depth)
-    
+
     def create_qkv(self, x):
 
         q = self.split_heads(self.wq(x))
         k = self.split_heads(self.wk(x))
         v = self.split_heads(self.wv(x))
-        
+
         return q, k, v
 
 #-----------------------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ class FeedForward(nn.Module):
 
         self.ff1 = nn.Linear(in_channels, 2048)
         self.ff2 = nn.Linear(2048, emb_dim)
-        
+
         self.init_weights(FeedForward)
 
     def init_weights(self, m):
@@ -140,7 +140,7 @@ class GraphTransformerEncoderLayer(nn.Module):
         self.n_heads = n_heads
         self.in_channels = in_channels
         self.n_hid = n_hid
-        
+
         if in_channels % n_heads != 0:
             raise AssertionError('Number of heads and input_channels need to be perfectly divided.')
 
@@ -155,7 +155,7 @@ class GraphTransformerEncoderLayer(nn.Module):
         self.emb_act = nn.PReLU(self.in_channels)
 
     def forward(self, x, data):
-        
+
         # Perform Multi Head Attention
         attn_out, self.attn_logits = self.mhga(x, data)
 
@@ -165,7 +165,7 @@ class GraphTransformerEncoderLayer(nn.Module):
         # Feedforward then add and norm
         ff = self.pwff(out1)
         ff = self.lnorm2(torch.add(ff, out1))
-        
+
         ff = self.emb_act(ff)
 
         return ff
@@ -179,7 +179,7 @@ class PostEncoding(nn.Module):
         super(PostEncoding,self).__init__()
         self.emb_dim = emb_dim
         self.act_emb = nn.Linear(2, emb_dim)
-        
+
     def forward(self, data):
         return self.act_emb(data.acts.float())
 
@@ -204,9 +204,9 @@ class GraphTransformerEncoder(nn.Module):
 
         if train_embs:
             self.init_weights(self.emb_layer)
-        
+
         self.pe = PostEncoding(self.in_channels)
-    
+
         self.transformers = nn.ModuleList([GraphTransformerEncoderLayer(self.in_channels, n_heads, n_hid) for _ in range(n_layers)])
 
     def init_weights(self, emb_layer):
@@ -240,7 +240,7 @@ class GraphTransformerEncoder(nn.Module):
         global_idx = data.global_idx
 
         x = self.emb_layer(global_idx)
-        act = self.pe(data.corr_acts)       
+        act = self.pe(data.corr_acts)
         x = torch.add(x, act)
 
         data.edge_index[1] = data.edge_index[1][torch.randperm(data.edge_index[1].size(0))]
