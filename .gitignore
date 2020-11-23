@@ -89,5 +89,7 @@ __pycache__/
 /data/samples_with_labels_tf_175.csv
 /embeddings/tranformers
 
+/lightning_logs
+
 __pycache__/
 >>>>>>> master

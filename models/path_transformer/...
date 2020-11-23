@@ -1,7 +1,0 @@
-import numpy as np
-import sys
-import os
-sys.path.append('...')
-
-from utils.data_gen import load_prot_embs 
-
