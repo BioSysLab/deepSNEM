@@ -1,23 +1,17 @@
 from __future__ import absolute_import, division
-from utils.data_gen import load_prot_embs, load_prot_embs_go, SNDatasetInfomax, SNDatasetInfomaxSemi
+from utils.data_gen import load_prot_embs, load_prot_embs_go, SNDatasetInfomax
 from models.graph_transformer.euclidean_graph_transformer import GraphTransformerEncoder, MultipleOptimizer, MultipleScheduler
 from models.deep_graph_infomax.infomax import SNInfomax
-from sklearn.utils.class_weight import compute_class_weight
 from sklearn.preprocessing import OneHotEncoder
 from tqdm.auto import tqdm
-from torch_geometric.utils.metric import accuracy, precision, f1_score
 from torch_geometric.nn import Set2Set
-from torch_geometric.data import Data, DataLoader, Dataset
-from torch.functional import F
-import torch.nn as nn
+from torch_geometric.data import DataLoader
 import torch
 
 import argparse
 
 import numpy as np
 import pandas as pd
-import math
-import re
 import sys
 import random
 import os
@@ -142,8 +136,9 @@ def train(epoch):
             MI='%.4f' % float(loss.item()),
             local_loss='%.4f' % float(local.item()),
             prior_loss='%.4f' % float(prior.item()))
+
         loss.backward(retain_graph=True)
-        #torch.nn.utils.clip_grad_norm_(model.encoder.emb_layer.parameters(), 0.05)
+        # torch.nn.utils.clip_grad_norm_(model.encoder.emb_layer.parameters(), 0.05)
         optimizer.step()
 
         del tb

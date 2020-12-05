@@ -45,6 +45,9 @@ __pycache__/
 .vscode/
 =======
 .Rproj.user
+.RData
+.RHistory
+.Rhistory
 .ipynb_checkpoints
 .vim/
 .log
