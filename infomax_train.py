@@ -138,7 +138,6 @@ def train(epoch):
             prior_loss='%.4f' % float(prior.item()))
 
         loss.backward(retain_graph=True)
-        # torch.nn.utils.clip_grad_norm_(model.encoder.emb_layer.parameters(), 0.05)
         optimizer.step()
 
         del tb
