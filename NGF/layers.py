@@ -252,7 +252,7 @@ class NeuralGraphHidden(layers.Layer):
         for degree in range(self.max_degree):
 
             # Create mask for this degree
-            atom_masks_this_degree = K.cast(K.equal(atom_degrees, degree), K.floatx())
+            atom_masks_this_degree = K.cast(K.equal(atom_degrees, degree+1), K.floatx())
 
             # Multiply with hidden merge layer
             #   (use time Distributed because we are dealing with 2D input/3D for batches)
